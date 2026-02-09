@@ -1,0 +1,52 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function para verificar se o usuário está autenticado
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function para verificar se o usuário é o dono do documento
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Collection: users
+    // Usuários podem ler/escrever apenas seus próprios dados
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+    
+    // Collection: patients
+    // Qualquer usuário autenticado pode ler pacientes
+    // Qualquer usuário autenticado pode criar/atualizar pacientes
+    match /patients/{patientId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated();
+    }
+    
+    // Collection: visits
+    // Qualquer usuário autenticado pode ler/criar visitas
+    match /visits/{visitId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if false; // Não permitir deletar visitas
+    }
+    
+    // Collection: visitRequests
+    // Qualquer usuário autenticado pode ler/criar solicitações
+    match /visitRequests/{requestId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if false; // Não permitir deletar solicitações
+    }
+  }
+}

@@ -1,0 +1,23 @@
+node_modules/
+.expo/
+.expo-shared/
+dist/
+npm-debug.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+web-build/
+.DS_Store
+*.log
+
+# Firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
+
+# Environment
+.env
+.env.local
