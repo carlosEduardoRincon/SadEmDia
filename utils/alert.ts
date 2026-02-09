@@ -6,10 +6,6 @@ type AlertButton = {
   style?: 'default' | 'cancel' | 'destructive';
 };
 
-/**
- * Exibe um alerta que funciona na web (window.alert/confirm) e no native (Alert.alert).
- * Na web, Alert.alert do React Native não mostra nada.
- */
 export function showAlert(
   title: string,
   message?: string,
@@ -27,7 +23,6 @@ export function showAlert(
       buttons[0].onPress?.();
       return;
     }
-    // Dois ou mais botões: usar confirm. OK = ação principal, Cancel = cancelar.
     const confirmed = window.confirm(text);
     if (confirmed) {
       const primary = buttons.find((b) => b.style !== 'cancel');

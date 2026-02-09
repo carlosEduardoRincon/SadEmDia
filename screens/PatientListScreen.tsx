@@ -78,12 +78,11 @@ export default function PatientListScreen() {
     const { patient, priorityScore, reasons } = item;
     const hasRequests = patient.visitRequests && patient.visitRequests.length > 0;
 
-    // Determinar cor da prioridade
-    let priorityColor = '#4CAF50'; // Verde (baixa)
+    let priorityColor = '#4CAF50';
     if (priorityScore >= 50) {
-      priorityColor = '#F44336'; // Vermelho (alta)
+      priorityColor = '#F44336';
     } else if (priorityScore >= 25) {
-      priorityColor = '#FF9800'; // Laranja (média)
+      priorityColor = '#FF9800';
     }
 
     return (

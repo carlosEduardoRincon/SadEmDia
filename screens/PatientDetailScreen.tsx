@@ -62,7 +62,7 @@ export default function PatientDetailScreen() {
       showAlert('Sucesso', 'Visita registrada com sucesso!');
       setVisitNotes('');
       setShowVisitForm(false);
-      loadData(); // Recarregar dados
+      loadData();
       navigation.goBack();
     } catch (error) {
       showAlert('Erro', 'Não foi possível registrar a visita');
@@ -94,7 +94,7 @@ export default function PatientDetailScreen() {
       showAlert('Sucesso', 'Solicitação de visita criada com sucesso!');
       setRequestReason('');
       setShowRequestForm(false);
-      loadData(); // Recarregar dados
+      loadData();
     } catch (error) {
       showAlert('Erro', 'Não foi possível criar a solicitação');
     } finally {
@@ -115,7 +115,6 @@ export default function PatientDetailScreen() {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.content}>
-        {/* Informações do Paciente */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Informações do Paciente</Text>
           <View style={styles.infoRow}>
@@ -134,7 +133,6 @@ export default function PatientDetailScreen() {
           </View>
         </View>
 
-        {/* Comorbidades */}
         {patient.comorbidities && patient.comorbidities.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Comorbidades</Text>
@@ -146,7 +144,6 @@ export default function PatientDetailScreen() {
           </View>
         )}
 
-        {/* Necessidade de Receita */}
         {patient.needsPrescription && (
           <View style={styles.section}>
             <View style={styles.alertBox}>
@@ -155,7 +152,6 @@ export default function PatientDetailScreen() {
           </View>
         )}
 
-        {/* Última Visita */}
         {patient.lastVisit && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Última Visita</Text>
@@ -176,7 +172,6 @@ export default function PatientDetailScreen() {
           </View>
         )}
 
-        {/* Motivos de Prioridade */}
         {priority.reasons.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Motivos de Prioridade</Text>
@@ -188,11 +183,9 @@ export default function PatientDetailScreen() {
           </View>
         )}
 
-        {/* Ações */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Ações</Text>
 
-          {/* Botão Registrar Visita */}
           {!showVisitForm ? (
             <TouchableOpacity
               style={styles.actionButton}
@@ -233,7 +226,6 @@ export default function PatientDetailScreen() {
             </View>
           )}
 
-          {/* Botão Solicitar Visita */}
           {!showRequestForm ? (
             <TouchableOpacity
               style={[styles.actionButton, styles.requestButton]}

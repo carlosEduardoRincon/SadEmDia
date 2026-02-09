@@ -39,7 +39,6 @@ export default function LoginScreen() {
     try {
       const user = await loginUser(email, password);
       setUser(user);
-      // App re-renderiza e mostra a tela de listagem de pacientes
     } catch (error: any) {
       const errorMessage = error?.message || 'Credenciais inválidas. Verifique seu email e senha.';
       const errorCode = error?.code != null ? ` [${error.code}]` : '';
@@ -57,14 +56,12 @@ export default function LoginScreen() {
       return;
     }
 
-    // Validar email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       showAlert('Erro', 'Por favor, insira um email válido');
       return;
     }
 
-    // Validar senha
     if (password.length < 6) {
       showAlert('Erro', 'A senha deve ter pelo menos 6 caracteres');
       return;
@@ -79,7 +76,6 @@ export default function LoginScreen() {
       console.log('Registro bem-sucedido!');
       showAlert('Sucesso', 'Conta criada com sucesso!');
       setIsRegistering(false);
-      // Limpar campos após sucesso
       setEmail('');
       setPassword('');
       setName('');

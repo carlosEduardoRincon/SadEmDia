@@ -18,9 +18,6 @@ const PATIENTS_COLLECTION = 'patients';
 const VISITS_COLLECTION = 'visits';
 const VISIT_REQUESTS_COLLECTION = 'visitRequests';
 
-/**
- * Converte Firestore Timestamp para Date
- */
 function timestampToDate(timestamp: any): Date | undefined {
   if (!timestamp) return undefined;
   if (timestamp.toDate) return timestamp.toDate();
@@ -28,17 +25,11 @@ function timestampToDate(timestamp: any): Date | undefined {
   return new Date(timestamp);
 }
 
-/**
- * Converte Date para Firestore Timestamp
- */
 function dateToTimestamp(date: Date | undefined): Timestamp | null {
   if (!date) return null;
   return Timestamp.fromDate(date);
 }
 
-/**
- * Busca todos os pacientes ordenados por prioridade
- */
 export async function getAllPatientsOrderedByPriority(): Promise<Array<{
   patient: Patient;
   priorityScore: number;
@@ -73,9 +64,6 @@ export async function getAllPatientsOrderedByPriority(): Promise<Array<{
   }
 }
 
-/**
- * Busca um paciente por ID
- */
 export async function getPatientById(patientId: string): Promise<Patient | null> {
   try {
     const db = getDb();
@@ -106,9 +94,6 @@ export async function getPatientById(patientId: string): Promise<Patient | null>
   }
 }
 
-/**
- * Cria um novo paciente
- */
 export async function createPatient(patientData: Omit<Patient, 'id' | 'createdAt' | 'updatedAt' | 'visits' | 'visitRequests'>): Promise<string> {
   try {
     const db = getDb();
@@ -128,9 +113,6 @@ export async function createPatient(patientData: Omit<Patient, 'id' | 'createdAt
   }
 }
 
-/**
- * Registra uma visita realizada
- */
 export async function registerVisit(
   patientId: string,
   professionalId: string,
@@ -142,7 +124,6 @@ export async function registerVisit(
     const db = getDb();
     const now = new Date();
     
-    // Criar registro da visita
     const visitRef = await addDoc(collection(db, VISITS_COLLECTION), {
       patientId,
       professionalId,
@@ -152,7 +133,6 @@ export async function registerVisit(
       visitRequestId: visitRequestId || null,
     });
 
-    // Atualizar paciente
     const patientRef = doc(db, PATIENTS_COLLECTION, patientId);
     const patient = await getPatientById(patientId);
     
@@ -164,7 +144,6 @@ export async function registerVisit(
         updatedAt: dateToTimestamp(now),
       });
 
-      // Se foi uma visita solicitada, marcar como completa
       if (visitRequestId) {
         const visitRequestRef = doc(db, VISIT_REQUESTS_COLLECTION, visitRequestId);
         await updateDoc(visitRequestRef, {
@@ -172,7 +151,6 @@ export async function registerVisit(
           completedAt: dateToTimestamp(now),
         });
 
-        // Remover da lista de solicitações pendentes do paciente
         await updateDoc(patientRef, {
           visitRequests: patient.visitRequests.filter(id => id !== visitRequestId),
         });
@@ -186,9 +164,6 @@ export async function registerVisit(
   }
 }
 
-/**
- * Cria uma solicitação de visita de outro profissional
- */
 export async function requestVisitFromProfessional(
   patientId: string,
   requestedBy: string,
@@ -200,7 +175,6 @@ export async function requestVisitFromProfessional(
     const db = getDb();
     const now = new Date();
     
-    // Criar solicitação
     const requestRef = await addDoc(collection(db, VISIT_REQUESTS_COLLECTION), {
       patientId,
       requestedBy,
@@ -211,7 +185,6 @@ export async function requestVisitFromProfessional(
       createdAt: dateToTimestamp(now),
     });
 
-    // Adicionar à lista de solicitações do paciente
     const patientRef = doc(db, PATIENTS_COLLECTION, patientId);
     const patient = await getPatientById(patientId);
     
@@ -229,9 +202,6 @@ export async function requestVisitFromProfessional(
   }
 }
 
-/**
- * Busca solicitações pendentes para um tipo de profissional
- */
 export async function getPendingVisitRequestsForProfessional(
   professionalType: ProfessionalType
 ): Promise<VisitRequest[]> {

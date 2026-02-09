@@ -152,7 +152,6 @@ function initializeAuthInstance(): Auth {
     }
   }
 
-  // React Native: usar initializeAuth com AsyncStorage
   if (!getReactNativePersistence || !ReactNativeAsyncStorage) {
     throw new Error('getReactNativePersistence não está disponível. Use getAuthInstanceAsync() ou aguarde.');
   }

@@ -1,23 +1,19 @@
-// Tipos de profissionais
 export type ProfessionalType = 'medico' | 'fisioterapeuta' | 'fonoaudiologo';
 
-// Status de solicitação de visita
 export type VisitRequestStatus = 'pending' | 'completed' | 'cancelled';
 
-// Solicitação de visita de outro profissional
 export interface VisitRequest {
   id: string;
   patientId: string;
-  requestedBy: string; // ID do profissional que solicitou
+  requestedBy: string;
   requestedByType: ProfessionalType;
-  requestedFor: ProfessionalType; // Tipo de profissional necessário
+  requestedFor: ProfessionalType;
   reason: string;
   status: VisitRequestStatus;
   createdAt: Date;
   completedAt?: Date;
 }
 
-// Visita realizada
 export interface Visit {
   id: string;
   patientId: string;
@@ -25,25 +21,23 @@ export interface Visit {
   professionalType: ProfessionalType;
   date: Date;
   notes?: string;
-  visitRequestId?: string; // Se foi uma visita solicitada
+  visitRequestId?: string;
 }
 
-// Paciente
 export interface Patient {
   id: string;
   name: string;
   age: number;
-  comorbidities: string[]; // Lista de comorbidades
-  needsPrescription: boolean; // Precisa de receita médica
-  lastVisit?: Date; // Data da última visita
-  lastVisitBy?: ProfessionalType; // Quem fez a última visita
-  visits: string[]; // IDs das visitas
-  visitRequests: string[]; // IDs das solicitações pendentes
+  comorbidities: string[];
+  needsPrescription: boolean;
+  lastVisit?: Date;
+  lastVisitBy?: ProfessionalType;
+  visits: string[];
+  visitRequests: string[];
   createdAt: Date;
   updatedAt: Date;
 }
 
-// Usuário/Profissional
 export interface User {
   id: string;
   email: string;
@@ -52,7 +46,6 @@ export interface User {
   createdAt: Date;
 }
 
-// Cálculo de prioridade do paciente
 export interface PatientPriority {
   patient: Patient;
   priorityScore: number;

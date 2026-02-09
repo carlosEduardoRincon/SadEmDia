@@ -25,18 +25,14 @@ export default function App() {
     let isMounted = true;
     let authTimer: NodeJS.Timeout | null = null;
     
-    // Aguardar um pouco antes de inicializar o Firebase
-    // O delay garante que o runtime do Expo está completamente pronto
     const timer = setTimeout(() => {
-      // Primeiro, inicializar o App do Firebase para garantir que está pronto
       try {
-        getApp(); // Garantir que o App está inicializado
+        getApp();
         console.log('Firebase App verificado');
       } catch (err) {
         console.warn('Erro ao verificar Firebase App:', err);
       }
 
-      // Aguardar mais um pouco antes de inicializar o Auth
       authTimer = setTimeout(async () => {
         try {
           console.log('Inicializando autenticação...');
@@ -54,8 +50,8 @@ export default function App() {
           setError(err.message || 'Erro ao inicializar Firebase');
           setLoading(false);
         }
-      }, 1000); // Delay maior para o Auth estar pronto
-    }, 2000); // Delay inicial maior para garantir que o runtime está pronto
+      }, 1000);
+    }, 2000);
 
     return () => {
       isMounted = false;
