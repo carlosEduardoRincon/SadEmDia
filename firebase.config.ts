@@ -2,6 +2,7 @@ import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import { getFirestore, Firestore } from 'firebase/firestore';
 import { initializeAuth, getAuth, Auth } from 'firebase/auth';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 
 let getReactNativePersistence: ((storage: any) => any) | null = null;
 let ReactNativeAsyncStorage: any = null;
@@ -14,15 +15,18 @@ if (Platform.OS !== 'web') {
   ) => any;
 }
 
+const extra = Constants.expoConfig?.extra as { firebase?: Record<string, string | undefined> } | undefined;
+const envConfig = extra?.firebase;
+
 const firebaseConfig = {
-  apiKey: "AIzaSyCms8QscZom-sc92ZixW8ZICFeJAMpnwIE",
-  authDomain: "sademdia-141d9.firebaseapp.com",
-  projectId: "sademdia-141d9",
-  storageBucket: "sademdia-141d9.firebasestorage.app",
-  messagingSenderId: "616355565918",
-  appId: "1:616355565918:web:535f42e330b8f3916bffcf",
-  measurementId: "G-TKV4TD9PDM"
-}
+  apiKey: envConfig?.apiKey ?? '',
+  authDomain: envConfig?.authDomain ?? '',
+  projectId: envConfig?.projectId ?? '',
+  storageBucket: envConfig?.storageBucket ?? '',
+  messagingSenderId: envConfig?.messagingSenderId ?? '',
+  appId: envConfig?.appId ?? '',
+  measurementId: envConfig?.measurementId ?? '',
+};
 
 let appInstance: FirebaseApp | null = null;
 let dbInstance: Firestore | null = null;

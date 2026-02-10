@@ -14,7 +14,7 @@ npm install
 3. Ative **Authentication** > **Email/Password**
 4. Ative **Firestore Database** (modo teste)
 5. Vá em **Project Settings** > copie as credenciais
-6. Cole no arquivo `firebase.config.ts` (copie de `firebase.config.example.ts`)
+6. Copie o arquivo `.env.example` para `.env` e preencha as variáveis com as credenciais do Firebase
 
 ### 3. Executar
 ```bash
