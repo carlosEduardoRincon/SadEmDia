@@ -17,6 +17,7 @@ web-build/
 .firebase/
 firebase-debug.log
 firestore-debug.log
+google-services.json
 
 # Environment
 .env
