@@ -7,7 +7,7 @@ export const PROFESSIONAL_TYPE_OPTIONS: ProfessionalType[] = [
 ];
 
 const LABELS: Record<ProfessionalType, string> = {
-  Cardiologista: 'Médico',
+  Cardiologista: 'Cardiologista',
   Fisioterapeuta: 'Fisioterapeuta',
   Fonoaudiólogo: 'Fonoaudiólogo',
 };
