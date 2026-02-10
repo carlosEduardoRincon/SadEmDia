@@ -2,12 +2,10 @@ require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 
-const androidApiKey = process.env.EXPO_PUBLIC_FIREBASE_ANDROID_API_KEY || '';
 const templatePath = path.join(__dirname, 'google-services.template.json');
 const outputPath = path.join(__dirname, 'google-services.json');
 if (fs.existsSync(templatePath)) {
   const template = fs.readFileSync(templatePath, 'utf8');
-  const content = template.replace('REPLACE_WITH_ANDROID_API_KEY', androidApiKey);
   fs.writeFileSync(outputPath, content);
 }
 
