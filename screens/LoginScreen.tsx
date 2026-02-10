@@ -13,13 +13,14 @@ import { loginUser, registerUser } from '../services/authService';
 import { showAlert } from '../utils/alert';
 import { ProfessionalType } from '../types';
 import { useAuth } from '../context/AuthContext';
+import { PROFESSIONAL_TYPE_OPTIONS, getProfessionalTypeLabel } from '../utils/professionalType';
 
 export default function LoginScreen() {
   const { setUser } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [professionalType, setProfessionalType] = useState<ProfessionalType>('medico');
+  const [professionalType, setProfessionalType] = useState<ProfessionalType>('Cardiologista');
   const [isRegistering, setIsRegistering] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -117,31 +118,28 @@ export default function LoginScreen() {
               <View style={styles.pickerContainer}>
                 <Text style={styles.label}>Tipo de Profissional:</Text>
                 <View style={styles.pickerRow}>
-                  {(['medico', 'fisioterapeuta', 'fonoaudiologo'] as ProfessionalType[]).map(
-                    (type) => (
+                  {PROFESSIONAL_TYPE_OPTIONS.map((type) => {
+                    const isSelected = professionalType === type;
+                    return (
                       <TouchableOpacity
                         key={type}
                         style={[
                           styles.pickerOption,
-                          professionalType === type && styles.pickerOptionSelected,
+                          isSelected && styles.pickerOptionSelected,
                         ]}
                         onPress={() => setProfessionalType(type)}
                       >
                         <Text
                           style={[
                             styles.pickerOptionText,
-                            professionalType === type && styles.pickerOptionTextSelected,
+                            isSelected && styles.pickerOptionTextSelected,
                           ]}
                         >
-                          {type === 'medico'
-                            ? 'Médico'
-                            : type === 'fisioterapeuta'
-                            ? 'Fisioterapeuta'
-                            : 'Fonoaudiólogo'}
+                          {getProfessionalTypeLabel(type)}
                         </Text>
                       </TouchableOpacity>
-                    )
-                  )}
+                    );
+                  })}
                 </View>
               </View>
             </>

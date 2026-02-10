@@ -7,14 +7,21 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
+  Modal,
+  TextInput,
+  Switch,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { showAlert } from '../utils/alert';
 import { useNavigation } from '@react-navigation/native';
-import { getAllPatientsOrderedByPriority } from '../services/patientService';
+import { getAllPatientsOrderedByPriority, createPatient } from '../services/patientService';
 import { PatientPriority } from '../types';
 import { getCurrentUser, logoutUser } from '../services/authService';
 import { User } from '../types';
 import { useAuth } from '../context/AuthContext';
+import { getProfessionalTypeLabel } from '../utils/professionalType';
 
 export default function PatientListScreen() {
   const navigation = useNavigation();
@@ -23,6 +30,12 @@ export default function PatientListScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [user, setUserLocal] = useState<User | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [formName, setFormName] = useState('');
+  const [formAge, setFormAge] = useState('');
+  const [formComorbidities, setFormComorbidities] = useState('');
+  const [formNeedsPrescription, setFormNeedsPrescription] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     loadUser();
@@ -51,6 +64,48 @@ export default function PatientListScreen() {
     setRefreshing(true);
     loadPatients();
   }, []);
+
+  const closeAddForm = () => {
+    setShowAddForm(false);
+    setFormName('');
+    setFormAge('');
+    setFormComorbidities('');
+    setFormNeedsPrescription(false);
+  };
+
+  const handleSavePatient = async () => {
+    const name = formName.trim();
+    if (!name) {
+      showAlert('Erro', 'Informe o nome do paciente');
+      return;
+    }
+    const ageNum = parseInt(formAge, 10);
+    if (!formAge || isNaN(ageNum) || ageNum < 0 || ageNum > 150) {
+      showAlert('Erro', 'Informe uma idade válida (0 a 150)');
+      return;
+    }
+    const comorbidities = formComorbidities
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    setSubmitting(true);
+    try {
+      await createPatient({
+        name,
+        age: ageNum,
+        comorbidities,
+        needsPrescription: formNeedsPrescription,
+      });
+      showAlert('Sucesso', 'Paciente cadastrado com sucesso');
+      closeAddForm();
+      await loadPatients();
+    } catch (error) {
+      showAlert('Erro', 'Não foi possível cadastrar o paciente');
+      console.error(error);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const handleLogout = () => {
     showAlert(
@@ -157,7 +212,7 @@ export default function PatientListScreen() {
       {user && (
         <View style={styles.userInfo}>
           <Text style={styles.userText}>
-            Olá, {user.name} ({user.professionalType === 'medico' ? 'Médico' : user.professionalType === 'fisioterapeuta' ? 'Fisioterapeuta' : 'Fonoaudiólogo'})
+            Olá, {user.name} ({getProfessionalTypeLabel(user.professionalType)})
           </Text>
           <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
             <Text style={styles.logoutText}>Sair</Text>
@@ -173,12 +228,88 @@ export default function PatientListScreen() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
+        ListHeaderComponent={
+          <TouchableOpacity
+            style={styles.addPatientButton}
+            onPress={() => setShowAddForm(true)}
+          >
+            <Text style={styles.addPatientButtonText}>+ Cadastrar paciente</Text>
+          </TouchableOpacity>
+        }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>Nenhum paciente cadastrado</Text>
           </View>
         }
       />
+
+      <Modal
+        visible={showAddForm}
+        animationType="slide"
+        transparent
+        onRequestClose={closeAddForm}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Novo paciente</Text>
+            <ScrollView keyboardShouldPersistTaps="handled">
+              <Text style={styles.formLabel}>Nome *</Text>
+              <TextInput
+                style={styles.formInput}
+                placeholder="Nome completo"
+                value={formName}
+                onChangeText={setFormName}
+                autoCapitalize="words"
+              />
+              <Text style={styles.formLabel}>Idade *</Text>
+              <TextInput
+                style={styles.formInput}
+                placeholder="Ex: 70"
+                value={formAge}
+                onChangeText={setFormAge}
+                keyboardType="number-pad"
+              />
+              <Text style={styles.formLabel}>Comorbidades</Text>
+              <TextInput
+                style={styles.formInput}
+                placeholder="Ex: Diabetes, Hipertensão (separadas por vírgula)"
+                value={formComorbidities}
+                onChangeText={setFormComorbidities}
+              />
+              <View style={styles.formSwitchRow}>
+                <Text style={styles.formLabel}>Precisa de receita médica</Text>
+                <Switch
+                  value={formNeedsPrescription}
+                  onValueChange={setFormNeedsPrescription}
+                  trackColor={{ false: '#ccc', true: '#4A90E2' }}
+                  thumbColor="#fff"
+                />
+              </View>
+            </ScrollView>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonCancel]}
+                onPress={closeAddForm}
+                disabled={submitting}
+              >
+                <Text style={styles.modalButtonCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonSave]}
+                onPress={handleSavePatient}
+                disabled={submitting}
+              >
+                <Text style={styles.modalButtonSaveText}>
+                  {submitting ? 'Salvando...' : 'Salvar'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -213,8 +344,87 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  addPatientButton: {
+    backgroundColor: '#4A90E2',
+    borderRadius: 8,
+    padding: 14,
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  addPatientButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   listContent: {
     padding: 15,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    maxHeight: '85%',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  formLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 6,
+  },
+  formInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 14,
+    backgroundColor: '#f9f9f9',
+  },
+  formSwitchRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  modalButton: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  modalButtonCancel: {
+    backgroundColor: '#e0e0e0',
+  },
+  modalButtonSave: {
+    backgroundColor: '#4A90E2',
+  },
+  modalButtonCancelText: {
+    color: '#333',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalButtonSaveText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   patientCard: {
     backgroundColor: '#fff',

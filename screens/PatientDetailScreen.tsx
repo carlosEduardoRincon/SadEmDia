@@ -18,6 +18,7 @@ import {
 import { getCurrentUser } from '../services/authService';
 import { Patient, User, ProfessionalType } from '../types';
 import { calculatePatientPriority } from '../services/priorityService';
+import { PROFESSIONAL_TYPE_OPTIONS, getProfessionalTypeLabel } from '../utils/professionalType';
 
 export default function PatientDetailScreen() {
   const route = useRoute();
@@ -29,7 +30,7 @@ export default function PatientDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [visitNotes, setVisitNotes] = useState('');
   const [requestReason, setRequestReason] = useState('');
-  const [requestProfessionalType, setRequestProfessionalType] = useState<ProfessionalType>('medico');
+  const [requestProfessionalType, setRequestProfessionalType] = useState<ProfessionalType>('Cardiologista');
   const [showVisitForm, setShowVisitForm] = useState(false);
   const [showRequestForm, setShowRequestForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -166,7 +167,7 @@ export default function PatientDetailScreen() {
             </Text>
             {patient.lastVisitBy && (
               <Text style={styles.subValue}>
-                Por: {patient.lastVisitBy === 'medico' ? 'Médico' : patient.lastVisitBy === 'fisioterapeuta' ? 'Fisioterapeuta' : 'Fonoaudiólogo'}
+                Por: {getProfessionalTypeLabel(patient.lastVisitBy)}
               </Text>
             )}
           </View>
@@ -237,31 +238,30 @@ export default function PatientDetailScreen() {
             <View style={styles.formContainer}>
               <Text style={styles.formLabel}>Tipo de Profissional:</Text>
               <View style={styles.pickerRow}>
-                {(['medico', 'fisioterapeuta', 'fonoaudiologo'] as ProfessionalType[])
-                  .filter(type => type !== user?.professionalType)
-                  .map((type) => (
+                {PROFESSIONAL_TYPE_OPTIONS.filter(
+                  (type) => type !== user?.professionalType
+                ).map((type) => {
+                  const isSelected = requestProfessionalType === type;
+                  return (
                     <TouchableOpacity
                       key={type}
                       style={[
                         styles.pickerOption,
-                        requestProfessionalType === type && styles.pickerOptionSelected,
+                        isSelected && styles.pickerOptionSelected,
                       ]}
                       onPress={() => setRequestProfessionalType(type)}
                     >
                       <Text
                         style={[
                           styles.pickerOptionText,
-                          requestProfessionalType === type && styles.pickerOptionTextSelected,
+                          isSelected && styles.pickerOptionTextSelected,
                         ]}
                       >
-                        {type === 'medico'
-                          ? 'Médico'
-                          : type === 'fisioterapeuta'
-                          ? 'Fisioterapeuta'
-                          : 'Fonoaudiólogo'}
+                        {getProfessionalTypeLabel(type)}
                       </Text>
                     </TouchableOpacity>
-                  ))}
+                  );
+                })}
               </View>
               <TextInput
                 style={styles.textArea}
