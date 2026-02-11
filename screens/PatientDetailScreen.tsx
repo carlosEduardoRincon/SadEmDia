@@ -14,6 +14,7 @@ import {
   getPatientById,
   registerVisit,
   requestVisitFromProfessional,
+  deletePatient,
 } from '../services/patientService';
 import { getCurrentUser } from '../services/authService';
 import { Patient, User, ProfessionalType } from '../types';
@@ -101,6 +102,33 @@ export default function PatientDetailScreen() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleRemovePatient = () => {
+    if (!patient) return;
+    showAlert(
+      'Remover paciente',
+      `Deseja realmente remover ${patient.name}? Esta ação não pode ser desfeita.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Remover',
+          style: 'destructive',
+          onPress: async () => {
+            setSubmitting(true);
+            try {
+              await deletePatient(patient.id);
+              showAlert('Sucesso', 'Paciente removido com sucesso');
+              navigation.goBack();
+            } catch (error) {
+              showAlert('Erro', 'Não foi possível remover o paciente');
+            } finally {
+              setSubmitting(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   if (loading || !patient) {
@@ -293,6 +321,14 @@ export default function PatientDetailScreen() {
               </View>
             </View>
           )}
+
+          <TouchableOpacity
+            style={[styles.actionButton, styles.removeButton]}
+            onPress={handleRemovePatient}
+            disabled={submitting}
+          >
+            <Text style={styles.removeButtonText}>Remover paciente</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </ScrollView>
@@ -383,6 +419,17 @@ const styles = StyleSheet.create({
   },
   requestButton: {
     backgroundColor: '#FF9800',
+  },
+  removeButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#E53935',
+    marginTop: 10,
+  },
+  removeButtonText: {
+    color: '#E53935',
+    fontSize: 16,
+    fontWeight: '600',
   },
   actionButtonText: {
     color: '#fff',

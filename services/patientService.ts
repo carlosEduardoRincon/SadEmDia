@@ -5,6 +5,7 @@ import {
   getDoc,
   addDoc,
   updateDoc,
+  deleteDoc,
   query,
   orderBy,
   where,
@@ -109,6 +110,17 @@ export async function createPatient(patientData: Omit<Patient, 'id' | 'createdAt
     return docRef.id;
   } catch (error) {
     console.error('Erro ao criar paciente:', error);
+    throw error;
+  }
+}
+
+export async function deletePatient(patientId: string): Promise<void> {
+  try {
+    const db = getDb();
+    const patientRef = doc(db, PATIENTS_COLLECTION, patientId);
+    await deleteDoc(patientRef);
+  } catch (error) {
+    console.error('Erro ao remover paciente:', error);
     throw error;
   }
 }

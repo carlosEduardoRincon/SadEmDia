@@ -15,13 +15,30 @@ import {
   Platform,
 } from 'react-native';
 import { showAlert } from '../utils/alert';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { getAllPatientsOrderedByPriority, createPatient } from '../services/patientService';
 import { PatientPriority } from '../types';
 import { getCurrentUser, logoutUser } from '../services/authService';
 import { User } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { getProfessionalTypeLabel } from '../utils/professionalType';
+
+const COMORBIDITY_OPTIONS = [
+  'Diabetes',
+  'Hipertensão',
+  'Obesidade',
+  'Doença cardíaca',
+  'DPOC',
+  'Asma',
+  'Insuficiência renal',
+  'Alzheimer / Demência',
+  'Câncer',
+  'Depressão',
+  'Artrite',
+  'Osteoporose',
+  'AVC prévio',
+  'Outro',
+];
 
 export default function PatientListScreen() {
   const navigation = useNavigation();
@@ -33,14 +50,20 @@ export default function PatientListScreen() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [formName, setFormName] = useState('');
   const [formAge, setFormAge] = useState('');
-  const [formComorbidities, setFormComorbidities] = useState('');
+  const [formComorbidities, setFormComorbidities] = useState<string[]>([]);
   const [formNeedsPrescription, setFormNeedsPrescription] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     loadUser();
-    loadPatients();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      setRefreshing(true);
+      loadPatients();
+    }, [])
+  );
 
   const loadUser = async () => {
     const currentUser = await getCurrentUser();
@@ -69,8 +92,14 @@ export default function PatientListScreen() {
     setShowAddForm(false);
     setFormName('');
     setFormAge('');
-    setFormComorbidities('');
+    setFormComorbidities([]);
     setFormNeedsPrescription(false);
+  };
+
+  const toggleComorbidity = (item: string) => {
+    setFormComorbidities((prev) =>
+      prev.includes(item) ? prev.filter((c) => c !== item) : [...prev, item]
+    );
   };
 
   const handleSavePatient = async () => {
@@ -84,16 +113,12 @@ export default function PatientListScreen() {
       showAlert('Erro', 'Informe uma idade válida (0 a 150)');
       return;
     }
-    const comorbidities = formComorbidities
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
     setSubmitting(true);
     try {
       await createPatient({
         name,
         age: ageNum,
-        comorbidities,
+        comorbidities: formComorbidities,
         needsPrescription: formNeedsPrescription,
       });
       showAlert('Sucesso', 'Paciente cadastrado com sucesso');
@@ -273,12 +298,30 @@ export default function PatientListScreen() {
                 keyboardType="number-pad"
               />
               <Text style={styles.formLabel}>Comorbidades</Text>
-              <TextInput
-                style={styles.formInput}
-                placeholder="Ex: Diabetes, Hipertensão (separadas por vírgula)"
-                value={formComorbidities}
-                onChangeText={setFormComorbidities}
-              />
+              <View style={styles.comorbidityToggles}>
+                {COMORBIDITY_OPTIONS.map((item) => {
+                  const isSelected = formComorbidities.includes(item);
+                  return (
+                    <TouchableOpacity
+                      key={item}
+                      style={[
+                        styles.comorbidityToggle,
+                        isSelected && styles.comorbidityToggleSelected,
+                      ]}
+                      onPress={() => toggleComorbidity(item)}
+                    >
+                      <Text
+                        style={[
+                          styles.comorbidityToggleText,
+                          isSelected && styles.comorbidityToggleTextSelected,
+                        ]}
+                      >
+                        {item}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
               <View style={styles.formSwitchRow}>
                 <Text style={styles.formLabel}>Precisa de receita médica</Text>
                 <Switch
@@ -392,6 +435,32 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 14,
     backgroundColor: '#f9f9f9',
+  },
+  comorbidityToggles: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 14,
+  },
+  comorbidityToggle: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    backgroundColor: '#f9f9f9',
+  },
+  comorbidityToggleSelected: {
+    backgroundColor: '#4A90E2',
+    borderColor: '#4A90E2',
+  },
+  comorbidityToggleText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  comorbidityToggleTextSelected: {
+    color: '#fff',
+    fontWeight: '600',
   },
   formSwitchRow: {
     flexDirection: 'row',
