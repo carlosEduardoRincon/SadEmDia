@@ -1,15 +1,17 @@
 import { ProfessionalType } from '../types';
 
 export const PROFESSIONAL_TYPE_OPTIONS: ProfessionalType[] = [
-  'Cardiologista',
+  'Médico',
   'Fisioterapeuta',
   'Fonoaudiólogo',
+  'Enfermeiro',
 ];
 
 const LABELS: Record<ProfessionalType, string> = {
-  Cardiologista: 'Cardiologista',
+  Medico: 'Médico',
   Fisioterapeuta: 'Fisioterapeuta',
   Fonoaudiólogo: 'Fonoaudiólogo',
+  Enfermeiro: 'Enfermeiro',
 };
 
 export function getProfessionalTypeLabel(type: ProfessionalType): string {

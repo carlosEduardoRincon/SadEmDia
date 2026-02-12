@@ -31,7 +31,7 @@ export default function PatientDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [visitNotes, setVisitNotes] = useState('');
   const [requestReason, setRequestReason] = useState('');
-  const [requestProfessionalType, setRequestProfessionalType] = useState<ProfessionalType>('Cardiologista');
+  const [requestProfessionalType, setRequestProfessionalType] = useState<ProfessionalType>('Medico');
   const [showVisitForm, setShowVisitForm] = useState(false);
   const [showRequestForm, setShowRequestForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);

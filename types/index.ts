@@ -1,4 +1,4 @@
-export type ProfessionalType = 'Cardiologista' | 'Fisioterapeuta' | 'Fonoaudiólogo';
+export type ProfessionalType = 'Medico' | 'Fisioterapeuta' | 'Fonoaudiólogo' | 'Enfermeiro';
 
 export type VisitRequestStatus = 'pending' | 'completed' | 'cancelled';
 
