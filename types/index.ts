@@ -1,6 +1,7 @@
-export type ProfessionalType = 'Medico' | 'Fisioterapeuta' | 'Fonoaudiólogo' | 'Enfermeiro' | 'Tecnico Enfermagem';
+export type ProfessionalType = 'Medicoo' | 'Fisioterapeuta' | 'Fonoaudiólogo' | 'Enfermeiro' | 'Tecnico Enfermagem';
 
 export type VisitRequestStatus = 'pending' | 'completed' | 'cancelled';
+
 
 export interface VisitRequest {
   id: string;
