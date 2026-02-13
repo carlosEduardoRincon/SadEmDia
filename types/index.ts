@@ -2,6 +2,7 @@ export type ProfessionalType = 'Medico' | 'Fisioterapeuta' | 'Fonoaudiólogo' | 
 
 export type VisitRequestStatus = 'pending' | 'completed' | 'cancelled';
 
+
 export interface VisitRequest {
   id: string;
   patientId: string;
