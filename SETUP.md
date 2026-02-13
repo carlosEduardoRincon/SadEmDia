@@ -141,7 +141,7 @@ Por enquanto, você pode adicionar pacientes diretamente no Firestore:
 {
   email: string;
   name: string;
-  professionalType: "medico" | "fisioterapeuta" | "fonoaudiologo";
+  professionalType: "medico" | "fisioterapeuta" | "fonoaudiologo" | "enfermeiro"| "tecnico enfermagem";
   createdAt: Timestamp;
 }
 ```
@@ -154,7 +154,7 @@ Por enquanto, você pode adicionar pacientes diretamente no Firestore:
   comorbidities: string[];
   needsPrescription: boolean;
   lastVisit?: Timestamp;
-  lastVisitBy?: "medico" | "fisioterapeuta" | "fonoaudiologo";
+  lastVisitBy?: "medico" | "fisioterapeuta" | "fonoaudiologo" | "enfermeiro" | "tecnico enfermagem";
   visits: string[]; // IDs das visitas
   visitRequests: string[]; // IDs das solicitações pendentes
   createdAt: Timestamp;
@@ -179,8 +179,8 @@ Por enquanto, você pode adicionar pacientes diretamente no Firestore:
 {
   patientId: string;
   requestedBy: string; // ID do profissional
-  requestedByType: "medico" | "fisioterapeuta" | "fonoaudiologo";
-  requestedFor: "medico" | "fisioterapeuta" | "fonoaudiologo";
+  requestedByType: "medico" | "fisioterapeuta" | "fonoaudiologo" | "enfermeiro"| "tecnico enfermagem";
+  requestedFor: "medico" | "fisioterapeuta" | "fonoaudiologo" | "enfermeiro" |"tecnico enfermagem";
   reason: string;
   status: "pending" | "completed" | "cancelled";
   createdAt: Timestamp;

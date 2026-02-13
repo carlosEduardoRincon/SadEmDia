@@ -5,6 +5,7 @@ export const PROFESSIONAL_TYPE_OPTIONS: ProfessionalType[] = [
   'Fisioterapeuta',
   'Fonoaudiólogo',
   'Enfermeiro',
+  'Tecnico Enfermagem',
 ];
 
 const LABELS: Record<ProfessionalType, string> = {
@@ -12,6 +13,7 @@ const LABELS: Record<ProfessionalType, string> = {
   Fisioterapeuta: 'Fisioterapeuta',
   Fonoaudiólogo: 'Fonoaudiólogo',
   Enfermeiro: 'Enfermeiro',
+  Tecnico Enfermagem: 'Técnico Enfermagem'
 };
 
 export function getProfessionalTypeLabel(type: ProfessionalType): string {
