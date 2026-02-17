@@ -1,12 +1,12 @@
 # SadEmDia - Sistema de Gestão de Pacientes
 
-Aplicativo mobile Android desenvolvido com React Native (Expo) e Firebase (Firestore) para gerenciar pacientes em um programa de saúde, com sistema de priorização inteligente e marcação de visitas.
+Aplicativo mobile (Android, iOS) e web desenvolvido com React Native (Expo) e Firebase (Firestore) para gerenciar pacientes em um programa de saúde, com sistema de priorização inteligente e marcação de visitas.
 
 ## 🚀 Funcionalidades
 
 - **Lista de Pacientes Ordenada por Prioridade**: Os pacientes são automaticamente ordenados com base em:
   - Comorbidades
-  - Necessidade de receita médica
+  - Necessidade de receita médica (alerta exibido apenas quando faltam 7 dias ou menos para a próxima entrega)
   - Tempo sem visita (especialmente próximo ao fim da semana)
   - Solicitações pendentes de outros profissionais
 
@@ -14,8 +14,9 @@ Aplicativo mobile Android desenvolvido com React Native (Expo) e Firebase (Fires
   - Médicos
   - Fisioterapeutas
   - Fonoaudiólogos
+  - Enfermeiros
 
-- **Registro de Visitas**: Profissionais podem marcar visitas realizadas, o que reduz a prioridade do paciente na lista
+- **Registro de Visitas**: Profissionais podem marcar visitas realizadas, registrar entrega de receita médica e definir a data da próxima entrega (com seletor de calendário), reduzindo a prioridade do paciente na lista
 
 - **Solicitação de Visitas**: Profissionais podem solicitar visitas de outros tipos de profissionais quando identificam necessidade específica
 
@@ -43,37 +44,41 @@ npm install
    - Crie um projeto no [Firebase Console](https://console.firebase.google.com/)
    - Ative o Authentication (Email/Password)
    - Crie um banco de dados Firestore
-   - Copie as credenciais do Firebase e cole no arquivo `firebase.config.ts`
+   - Crie um arquivo `.env` na raiz do projeto com as variáveis do Firebase (veja seção Configuração do Firebase)
 
 4. Execute o aplicativo:
 ```bash
-npm start
+npm start          # Abre o menu do Expo
+npm run web       # Executa na web
+npm run android   # Executa no Android
+npm run ios       # Executa no iOS
 ```
 
 ## 🔥 Configuração do Firebase
 
 1. No Firebase Console, vá em **Project Settings** > **General**
 2. Copie as configurações do seu projeto
-3. Abra o arquivo `firebase.config.ts` e substitua os valores:
+3. Crie um arquivo `.env` na raiz do projeto com as seguintes variáveis:
 
-```typescript
-const firebaseConfig = {
-  apiKey: "SUA_API_KEY",
-  authDomain: "SEU_AUTH_DOMAIN",
-  projectId: "SEU_PROJECT_ID",
-  storageBucket: "SEU_STORAGE_BUCKET",
-  messagingSenderId: "SEU_MESSAGING_SENDER_ID",
-  appId: "SEU_APP_ID"
-};
 ```
+EXPO_PUBLIC_FIREBASE_API_KEY=sua_api_key
+EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=seu_auth_domain
+EXPO_PUBLIC_FIREBASE_PROJECT_ID=seu_project_id
+EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=seu_storage_bucket
+EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=seu_messaging_sender_id
+EXPO_PUBLIC_FIREBASE_APP_ID=seu_app_id
+EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID=seu_measurement_id
+```
+
+> **Importante**: O arquivo `.env` não deve ser commitado. Adicione-o ao `.gitignore`.
 
 ### Estrutura do Firestore
 
 O aplicativo utiliza as seguintes coleções:
 
 - **users**: Dados dos profissionais
-- **patients**: Dados dos pacientes
-- **visits**: Registro de visitas realizadas
+- **patients**: Dados dos pacientes (inclui `needsPrescription`, `nextPrescriptionDue` para controle de receitas médicas)
+- **visits**: Registro de visitas realizadas (inclui `prescriptionDelivered`, `nextPrescriptionDue` quando aplicável)
 - **visitRequests**: Solicitações de visitas entre profissionais
 
 ## 📱 Como Usar
@@ -89,7 +94,9 @@ O aplicativo utiliza as seguintes coleções:
 3. **Registrar Visita**:
    - Toque em um paciente para ver detalhes
    - Clique em "Registrar Visita Realizada"
-   - Adicione observações (opcional) e confirme
+   - Adicione observações (opcional)
+   - Se o paciente precisa de receita, marque "Receita foi entregue?" e selecione a data da próxima entrega no calendário
+   - Confirme
 
 4. **Solicitar Visita de Outro Profissional**:
    - Na tela de detalhes do paciente
@@ -124,11 +131,13 @@ SadEmDia/
 - **TypeScript**: Tipagem estática
 - **React Navigation**: Navegação entre telas
 - **date-fns**: Manipulação de datas
+- **@react-native-community/datetimepicker**: Seletor de data para entrega de receita (iOS/Android)
 
 ## 📝 Notas
 
 - O sistema de priorização é calculado em tempo real baseado nos critérios definidos
 - Quando uma visita é registrada, a prioridade do paciente é automaticamente recalculada
+- O alerta "Precisa de receita médica" só aparece quando faltam 7 dias ou menos para a próxima data de entrega, ou quando não há data definida
 - Solicitações de visitas aumentam a prioridade do paciente para o profissional solicitado
 
 ## 🤝 Contribuindo
