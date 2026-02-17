@@ -22,6 +22,7 @@ import { getCurrentUser, logoutUser } from '../services/authService';
 import { User } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { getProfessionalTypeLabel } from '../utils/professionalType';
+import { patientNeedsPrescription } from '../services/priorityService';
 
 const COMORBIDITY_OPTIONS = [
   'Diabetes',
@@ -197,7 +198,7 @@ export default function PatientListScreen() {
           </View>
         )}
 
-        {patient.needsPrescription && (
+        {patientNeedsPrescription(patient) && (
           <View style={styles.prescriptionBadge}>
             <Text style={styles.prescriptionText}>📋 Precisa de receita médica</Text>
           </View>

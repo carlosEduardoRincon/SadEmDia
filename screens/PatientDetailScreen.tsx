@@ -7,7 +7,10 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
+  Switch,
+  Platform,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { showAlert } from '../utils/alert';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import {
@@ -18,8 +21,10 @@ import {
 } from '../services/patientService';
 import { getCurrentUser } from '../services/authService';
 import { Patient, User, ProfessionalType } from '../types';
-import { calculatePatientPriority } from '../services/priorityService';
+import { calculatePatientPriority, patientNeedsPrescription } from '../services/priorityService';
 import { PROFESSIONAL_TYPE_OPTIONS, getProfessionalTypeLabel } from '../utils/professionalType';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 export default function PatientDetailScreen() {
   const route = useRoute();
@@ -35,6 +40,9 @@ export default function PatientDetailScreen() {
   const [showVisitForm, setShowVisitForm] = useState(false);
   const [showRequestForm, setShowRequestForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [prescriptionDelivered, setPrescriptionDelivered] = useState(false);
+  const [nextPrescriptionDue, setNextPrescriptionDue] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -58,11 +66,31 @@ export default function PatientDetailScreen() {
   const handleRegisterVisit = async () => {
     if (!user || !patient) return;
 
+    let nextPrescriptionDueDate: Date | undefined;
+    if (prescriptionDelivered) {
+      if (nextPrescriptionDue) {
+        nextPrescriptionDueDate = nextPrescriptionDue;
+      } else {
+        showAlert('Erro', 'Selecione a próxima data da receita quando marcar que foi entregue');
+        return;
+      }
+    }
+
     setSubmitting(true);
     try {
-      await registerVisit(patient.id, user.id, user.professionalType, visitNotes);
+      await registerVisit(
+        patient.id,
+        user.id,
+        user.professionalType,
+        visitNotes,
+        undefined,
+        prescriptionDelivered ? true : undefined,
+        nextPrescriptionDueDate
+      );
       showAlert('Sucesso', 'Visita registrada com sucesso!');
       setVisitNotes('');
+      setPrescriptionDelivered(false);
+      setNextPrescriptionDue(null);
       setShowVisitForm(false);
       loadData();
       navigation.goBack();
@@ -173,7 +201,7 @@ export default function PatientDetailScreen() {
           </View>
         )}
 
-        {patient.needsPrescription && (
+        {patientNeedsPrescription(patient) && (
           <View style={styles.section}>
             <View style={styles.alertBox}>
               <Text style={styles.alertText}>📋 Precisa de receita médica</Text>
@@ -232,12 +260,103 @@ export default function PatientDetailScreen() {
                 multiline
                 numberOfLines={4}
               />
+              {patient.needsPrescription && (
+                <View style={styles.prescriptionSection}>
+                  <View style={styles.switchRow}>
+                    <Text style={styles.formLabel}>Receita foi entregue?</Text>
+                    <Switch
+                      value={prescriptionDelivered}
+                      onValueChange={setPrescriptionDelivered}
+                      trackColor={{ false: '#ddd', true: '#4A90E2' }}
+                      thumbColor="#fff"
+                    />
+                  </View>
+                  {prescriptionDelivered && (
+                    <View style={styles.datePickerRow}>
+                      <Text style={styles.formLabel}>
+                        Data para a próxima entrega de receita
+                      </Text>
+                      {Platform.OS === 'web' ? (
+                        <View style={styles.dateInputWrapper}>
+                          <input
+                            type="date"
+                            value={nextPrescriptionDue ? format(nextPrescriptionDue, 'yyyy-MM-dd') : ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val) {
+                                setNextPrescriptionDue(new Date(val + 'T12:00:00'));
+                              } else {
+                                setNextPrescriptionDue(null);
+                              }
+                            }}
+                            min={format(new Date(), 'yyyy-MM-dd')}
+                            style={{
+                              width: '100%',
+                              maxWidth: '100%',
+                              minWidth: 0,
+                              boxSizing: 'border-box',
+                              padding: 15,
+                              fontSize: 16,
+                              border: '1px solid #ddd',
+                              borderRadius: 8,
+                              backgroundColor: '#f9f9f9',
+                              cursor: 'pointer',
+                            } as React.CSSProperties}
+                          />
+                        </View>
+                      ) : (
+                        <>
+                          <TouchableOpacity
+                            style={styles.dateButton}
+                            onPress={() => setShowDatePicker(true)}
+                          >
+                            <Text style={styles.dateButtonText}>
+                              {nextPrescriptionDue
+                                ? format(nextPrescriptionDue, "d 'de' MMMM 'de' yyyy", { locale: ptBR })
+                                : '📅 Selecionar data da próxima receita'}
+                            </Text>
+                          </TouchableOpacity>
+                          {showDatePicker && (
+                        <View style={styles.datePickerContainer}>
+                          <DateTimePicker
+                            value={nextPrescriptionDue || new Date()}
+                            mode="date"
+                            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                            onChange={(_, selectedDate) => {
+                              if (selectedDate) {
+                                setNextPrescriptionDue(selectedDate);
+                                if (Platform.OS === 'android') {
+                                  setShowDatePicker(false);
+                                }
+                              }
+                            }}
+                            minimumDate={new Date()}
+                            locale="pt-BR"
+                          />
+                          {Platform.OS === 'ios' && (
+                            <TouchableOpacity
+                              style={styles.dateConfirmButton}
+                              onPress={() => setShowDatePicker(false)}
+                            >
+                              <Text style={styles.dateConfirmButtonText}>Confirmar</Text>
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                          )}
+                        </>
+                      )}
+                    </View>
+                  )}
+                </View>
+              )}
               <View style={styles.formButtons}>
                 <TouchableOpacity
                   style={[styles.formButton, styles.cancelButton]}
                   onPress={() => {
                     setShowVisitForm(false);
                     setVisitNotes('');
+                    setPrescriptionDelivered(false);
+                    setNextPrescriptionDue(null);
                   }}
                 >
                   <Text style={styles.cancelButtonText}>Cancelar</Text>
@@ -415,7 +534,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 15,
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 16,
   },
   requestButton: {
     backgroundColor: '#FF9800',
@@ -424,7 +543,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     borderWidth: 1,
     borderColor: '#E53935',
-    marginTop: 10,
+    marginTop: 4,
   },
   removeButtonText: {
     color: '#E53935',
@@ -438,6 +557,67 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     marginTop: 10,
+    width: '100%',
+    maxWidth: '100%',
+  },
+  prescriptionSection: {
+    marginBottom: 15,
+    width: '100%',
+    maxWidth: '100%',
+  },
+  datePickerRow: {
+    marginTop: 5,
+    alignSelf: 'stretch',
+    width: '100%',
+    maxWidth: '100%',
+    minWidth: 0,
+    flexShrink: 1,
+  },
+  dateInputWrapper: {
+    width: '100%',
+    maxWidth: '100%',
+    minWidth: 0,
+  },
+  dateButton: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 15,
+    backgroundColor: '#f9f9f9',
+  },
+  dateButtonText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  datePickerContainer: {
+    marginTop: 10,
+  },
+  dateConfirmButton: {
+    backgroundColor: '#4A90E2',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  dateConfirmButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  switchRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  textInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 15,
+    fontSize: 16,
+    marginTop: 5,
+    backgroundColor: '#f9f9f9',
   },
   formLabel: {
     fontSize: 16,
@@ -485,6 +665,7 @@ const styles = StyleSheet.create({
   formButtons: {
     flexDirection: 'row',
     gap: 10,
+    marginBottom: 16,
   },
   formButton: {
     flex: 1,

@@ -49,6 +49,7 @@ export async function getAllPatientsOrderedByPriority(): Promise<Array<{
         age: data.age,
         comorbidities: data.comorbidities || [],
         needsPrescription: data.needsPrescription || false,
+        nextPrescriptionDue: timestampToDate(data.nextPrescriptionDue),
         lastVisit: timestampToDate(data.lastVisit),
         lastVisitBy: data.lastVisitBy,
         visits: data.visits || [],
@@ -82,6 +83,7 @@ export async function getPatientById(patientId: string): Promise<Patient | null>
       age: data.age,
       comorbidities: data.comorbidities || [],
       needsPrescription: data.needsPrescription || false,
+      nextPrescriptionDue: timestampToDate(data.nextPrescriptionDue),
       lastVisit: timestampToDate(data.lastVisit),
       lastVisitBy: data.lastVisitBy,
       visits: data.visits || [],
@@ -130,7 +132,9 @@ export async function registerVisit(
   professionalId: string,
   professionalType: ProfessionalType,
   notes?: string,
-  visitRequestId?: string
+  visitRequestId?: string,
+  prescriptionDelivered?: boolean,
+  nextPrescriptionDue?: Date
 ): Promise<string> {
   try {
     const db = getDb();
@@ -143,30 +147,35 @@ export async function registerVisit(
       date: dateToTimestamp(now),
       notes: notes || null,
       visitRequestId: visitRequestId || null,
+      prescriptionDelivered: prescriptionDelivered ?? null,
+      nextPrescriptionDue: nextPrescriptionDue ? dateToTimestamp(nextPrescriptionDue) : null,
     });
 
     const patientRef = doc(db, PATIENTS_COLLECTION, patientId);
     const patient = await getPatientById(patientId);
     
     if (patient) {
-      await updateDoc(patientRef, {
+      const patientUpdate: Record<string, any> = {
         lastVisit: dateToTimestamp(now),
         lastVisitBy: professionalType,
         visits: [...patient.visits, visitRef.id],
         updatedAt: dateToTimestamp(now),
-      });
+      };
+
+      if (prescriptionDelivered && nextPrescriptionDue) {
+        patientUpdate.nextPrescriptionDue = dateToTimestamp(nextPrescriptionDue);
+      }
 
       if (visitRequestId) {
+        patientUpdate.visitRequests = patient.visitRequests.filter(id => id !== visitRequestId);
         const visitRequestRef = doc(db, VISIT_REQUESTS_COLLECTION, visitRequestId);
         await updateDoc(visitRequestRef, {
           status: 'completed',
           completedAt: dateToTimestamp(now),
         });
-
-        await updateDoc(patientRef, {
-          visitRequests: patient.visitRequests.filter(id => id !== visitRequestId),
-        });
       }
+
+      await updateDoc(patientRef, patientUpdate);
     }
 
     return visitRef.id;

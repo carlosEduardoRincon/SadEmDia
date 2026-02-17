@@ -23,6 +23,8 @@ export interface Visit {
   date: Date;
   notes?: string;
   visitRequestId?: string;
+  prescriptionDelivered?: boolean;
+  nextPrescriptionDue?: Date;
 }
 
 export interface Patient {
@@ -31,6 +33,7 @@ export interface Patient {
   age: number;
   comorbidities: string[];
   needsPrescription: boolean;
+  nextPrescriptionDue?: Date;
   lastVisit?: Date;
   lastVisitBy?: ProfessionalType;
   visits: string[];

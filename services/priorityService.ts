@@ -1,6 +1,17 @@
 import { Patient, PatientPriority, ProfessionalType } from '../types';
 import { differenceInDays, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
 
+export function patientNeedsPrescription(
+  patient: Patient,
+  currentDate: Date = new Date()
+): boolean {
+  if (!patient.needsPrescription) return false;
+  if (!patient.nextPrescriptionDue) return true;
+  // Exibir apenas se a data passou ou está a 7 dias ou menos da próxima entrega
+  const daysUntilDue = differenceInDays(patient.nextPrescriptionDue, currentDate);
+  return daysUntilDue <= 7;
+}
+
 export function calculatePatientPriority(
   patient: Patient,
   currentDate: Date = new Date()
@@ -14,7 +25,9 @@ export function calculatePatientPriority(
     reasons.push(`${patient.comorbidities.length} comorbidade(s)`);
   }
 
-  if (patient.needsPrescription) {
+  const needsPrescriptionNow = patientNeedsPrescription(patient, currentDate);
+
+  if (needsPrescriptionNow) {
     priorityScore += 30;
     reasons.push('Precisa de receita médica');
   }
