@@ -21,7 +21,7 @@ import {
 } from '../services/patientService';
 import { getCurrentUser } from '../services/authService';
 import { Patient, User, ProfessionalType } from '../types';
-import { calculatePatientPriority, patientNeedsPrescription } from '../services/priorityService';
+import { calculatePatientPriority } from '../services/priorityService';
 import { PROFESSIONAL_TYPE_OPTIONS, getProfessionalTypeLabel } from '../utils/professionalType';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -210,14 +210,6 @@ export default function PatientDetailScreen() {
                 • {comorbidity}
               </Text>
             ))}
-          </View>
-        )}
-
-        {patientNeedsPrescription(patient) && (
-          <View style={styles.section}>
-            <View style={styles.alertBox}>
-              <Text style={styles.alertText}>📋 Precisa de receita médica</Text>
-            </View>
           </View>
         )}
 

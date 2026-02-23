@@ -24,7 +24,6 @@ import { useAuth } from '../context/AuthContext';
 import { getProfessionalTypeLabel } from '../utils/professionalType';
 import { ZONE_OPTIONS } from '../utils/zone';
 import type { Zone } from '../types';
-import { patientNeedsPrescription } from '../services/priorityService';
 
 const COMORBIDITY_OPTIONS = [
   'Terminal',
@@ -158,7 +157,6 @@ export default function PatientListScreen() {
 
   const renderPatientItem = ({ item }: { item: PatientPriority }) => {
     const { patient, priorityScore, reasons } = item;
-    const hasRequests = patient.visitRequests && patient.visitRequests.length > 0;
 
     let priorityColor = '#4CAF50';
     if (priorityScore >= 50) {
@@ -187,26 +185,12 @@ export default function PatientListScreen() {
           </View>
         </View>
 
-        {hasRequests && (
-          <View style={styles.requestBadge}>
-            <Text style={styles.requestText}>
-              ⚠️ {patient.visitRequests.length} solicitação(ões) pendente(s)
-            </Text>
-          </View>
-        )}
-
         {patient.comorbidities && patient.comorbidities.length > 0 && (
           <View style={styles.comorbiditiesContainer}>
             <Text style={styles.comorbiditiesLabel}>Comorbidades:</Text>
             <Text style={styles.comorbiditiesText}>
               {patient.comorbidities.join(', ')}
             </Text>
-          </View>
-        )}
-
-        {patientNeedsPrescription(patient) && (
-          <View style={styles.prescriptionBadge}>
-            <Text style={styles.prescriptionText}>📋 Precisa de receita médica</Text>
           </View>
         )}
 
