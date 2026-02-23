@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -46,6 +46,49 @@ export default function PatientListScreen() {
   const [formAddress, setFormAddress] = useState('');
   const [formZone, setFormZone] = useState<Zone | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [filterComorbidity, setFilterComorbidity] = useState<string | null>(null);
+  const [filterZone, setFilterZone] = useState<Zone | null>(null);
+  const [filterAdmission, setFilterAdmission] = useState<'recent' | 'second_week' | 'after_two_weeks' | null>(null);
+
+  const filteredPatients = useMemo(() => {
+    const now = Date.now();
+    const msPerDay = 24 * 60 * 60 * 1000;
+    return patients.filter(({ patient }) => {
+      if (filterComorbidity != null) {
+        if (!patient.comorbidities?.includes(filterComorbidity)) return false;
+      }
+      if (filterZone != null) {
+        if (patient.zone !== filterZone) return false;
+      }
+      if (filterAdmission != null && patient.createdAt) {
+        const created = patient.createdAt instanceof Date
+          ? patient.createdAt.getTime()
+          : new Date(patient.createdAt).getTime();
+        const daysSinceCreation = (now - created) / msPerDay;
+        if (filterAdmission === 'recent' && daysSinceCreation >= 7) return false;
+        if (filterAdmission === 'second_week' && (daysSinceCreation < 7 || daysSinceCreation >= 14)) return false;
+        if (filterAdmission === 'after_two_weeks' && daysSinceCreation < 14) return false;
+      }
+      return true;
+    });
+  }, [patients, filterComorbidity, filterZone, filterAdmission]);
+
+  const hasActiveFilters =
+    filterComorbidity != null ||
+    filterZone != null ||
+    filterAdmission != null;
+
+  const clearFilters = () => {
+    setFilterComorbidity(null);
+    setFilterZone(null);
+    setFilterAdmission(null);
+  };
+
+  const ADMISSION_OPTIONS: { value: 'recent' | 'second_week' | 'after_two_weeks'; label: string }[] = [
+    { value: 'recent', label: 'Recém-admitido' },
+    { value: 'second_week', label: 'Segunda semana' },
+    { value: 'after_two_weeks', label: 'Após duas semanas' },
+  ];
 
   useEffect(() => {
     loadUser();
@@ -236,8 +279,92 @@ export default function PatientListScreen() {
         </View>
       )}
 
+      <View style={styles.filterSection}>
+        <Text style={styles.filterSectionTitle}>Filtros</Text>
+        <Text style={styles.filterLabel}>Comorbidade</Text>
+        <View style={styles.filterChipsRow}>
+          <TouchableOpacity
+            style={[styles.filterChip, filterComorbidity === null && styles.filterChipSelected]}
+            onPress={() => setFilterComorbidity(null)}
+          >
+            <Text style={[styles.filterChipText, filterComorbidity === null && styles.filterChipTextSelected]}>
+              Todas
+            </Text>
+          </TouchableOpacity>
+          {COMORBIDITY_OPTIONS.map((opt) => {
+            const isSelected = filterComorbidity === opt;
+            return (
+              <TouchableOpacity
+                key={opt}
+                style={[styles.filterChip, isSelected && styles.filterChipSelected]}
+                onPress={() => setFilterComorbidity(opt)}
+              >
+                <Text style={[styles.filterChipText, isSelected && styles.filterChipTextSelected]}>
+                  {opt}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        <Text style={styles.filterLabel}>Zona</Text>
+        <View style={styles.filterChipsRow}>
+          <TouchableOpacity
+            style={[styles.filterChip, filterZone === null && styles.filterChipSelected]}
+            onPress={() => setFilterZone(null)}
+          >
+            <Text style={[styles.filterChipText, filterZone === null && styles.filterChipTextSelected]}>
+              Todas
+            </Text>
+          </TouchableOpacity>
+          {ZONE_OPTIONS.map((zone) => {
+            const isSelected = filterZone === zone;
+            return (
+              <TouchableOpacity
+                key={zone}
+                style={[styles.filterChip, isSelected && styles.filterChipSelected]}
+                onPress={() => setFilterZone(zone)}
+              >
+                <Text style={[styles.filterChipText, isSelected && styles.filterChipTextSelected]}>
+                  {zone.replace('Zona ', '')}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        <Text style={styles.filterLabel}>Tempo de admissão</Text>
+        <View style={styles.filterChipsRow}>
+          <TouchableOpacity
+            style={[styles.filterChip, filterAdmission === null && styles.filterChipSelected]}
+            onPress={() => setFilterAdmission(null)}
+          >
+            <Text style={[styles.filterChipText, filterAdmission === null && styles.filterChipTextSelected]}>
+              Todas
+            </Text>
+          </TouchableOpacity>
+          {ADMISSION_OPTIONS.map(({ value, label }) => {
+            const isSelected = filterAdmission === value;
+            return (
+              <TouchableOpacity
+                key={value}
+                style={[styles.filterChip, isSelected && styles.filterChipSelected]}
+                onPress={() => setFilterAdmission(value)}
+              >
+                <Text style={[styles.filterChipText, isSelected && styles.filterChipTextSelected]}>
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        {hasActiveFilters && (
+          <TouchableOpacity style={styles.clearFiltersButton} onPress={clearFilters}>
+            <Text style={styles.clearFiltersText}>Limpar filtros</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
       <FlatList
-        data={patients}
+        data={filteredPatients}
         renderItem={renderPatientItem}
         keyExtractor={(item) => item.patient.id}
         contentContainerStyle={styles.listContent}
@@ -254,7 +381,16 @@ export default function PatientListScreen() {
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>Nenhum paciente cadastrado</Text>
+            <Text style={styles.emptyText}>
+              {hasActiveFilters
+                ? 'Nenhum paciente encontrado com os filtros aplicados'
+                : 'Nenhum paciente cadastrado'}
+            </Text>
+            {hasActiveFilters && (
+              <TouchableOpacity style={styles.clearFiltersButtonEmpty} onPress={clearFilters}>
+                <Text style={styles.clearFiltersTextEmpty}>Limpar filtros</Text>
+              </TouchableOpacity>
+            )}
           </View>
         }
       />
@@ -400,6 +536,77 @@ const styles = StyleSheet.create({
   logoutText: {
     color: '#fff',
     fontSize: 14,
+    fontWeight: '600',
+  },
+  filterSection: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  filterSectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 10,
+  },
+  filterLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 6,
+    marginTop: 4,
+  },
+  filterChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 4,
+  },
+  filterChip: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    backgroundColor: '#f5f5f5',
+  },
+  filterChipSelected: {
+    backgroundColor: '#4A90E2',
+    borderColor: '#4A90E2',
+  },
+  filterChipText: {
+    fontSize: 13,
+    color: '#333',
+  },
+  filterChipTextSelected: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  clearFiltersButton: {
+    alignSelf: 'flex-start',
+    marginTop: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    backgroundColor: '#e0e0e0',
+  },
+  clearFiltersText: {
+    fontSize: 14,
+    color: '#555',
+    fontWeight: '600',
+  },
+  clearFiltersButtonEmpty: {
+    marginTop: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    backgroundColor: '#4A90E2',
+  },
+  clearFiltersTextEmpty: {
+    fontSize: 14,
+    color: '#fff',
     fontWeight: '600',
   },
   addPatientButton: {
