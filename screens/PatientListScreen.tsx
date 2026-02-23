@@ -22,23 +22,14 @@ import { getCurrentUser, logoutUser } from '../services/authService';
 import { User } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { getProfessionalTypeLabel } from '../utils/professionalType';
+import { ZONE_OPTIONS } from '../utils/zone';
+import type { Zone } from '../types';
 import { patientNeedsPrescription } from '../services/priorityService';
 
 const COMORBIDITY_OPTIONS = [
-  'Diabetes',
-  'Hipertensão',
-  'Obesidade',
-  'Doença cardíaca',
-  'DPOC',
-  'Asma',
-  'Insuficiência renal',
-  'Alzheimer / Demência',
-  'Câncer',
-  'Depressão',
-  'Artrite',
-  'Osteoporose',
-  'AVC prévio',
-  'Outro',
+  'Terminal',
+  'Oncológico',
+  'Ventilação Mecânica',
 ];
 
 export default function PatientListScreen() {
@@ -53,6 +44,8 @@ export default function PatientListScreen() {
   const [formAge, setFormAge] = useState('');
   const [formComorbidities, setFormComorbidities] = useState<string[]>([]);
   const [formNeedsPrescription, setFormNeedsPrescription] = useState(false);
+  const [formAddress, setFormAddress] = useState('');
+  const [formZone, setFormZone] = useState<Zone | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -95,6 +88,8 @@ export default function PatientListScreen() {
     setFormAge('');
     setFormComorbidities([]);
     setFormNeedsPrescription(false);
+    setFormAddress('');
+    setFormZone(null);
   };
 
   const toggleComorbidity = (item: string) => {
@@ -116,9 +111,15 @@ export default function PatientListScreen() {
     }
     setSubmitting(true);
     try {
+      if (!formZone) {
+      showAlert('Erro', 'Selecione a zona do paciente');
+      return;
+    }
       await createPatient({
         name,
         age: ageNum,
+        address: formAddress.trim() || undefined,
+        zone: formZone,
         comorbidities: formComorbidities,
         needsPrescription: formNeedsPrescription,
       });
@@ -175,6 +176,11 @@ export default function PatientListScreen() {
           <View style={styles.patientInfo}>
             <Text style={styles.patientName}>{patient.name}</Text>
             <Text style={styles.patientAge}>Idade: {patient.age} anos</Text>
+            {(patient.address || patient.zone) && (
+              <Text style={styles.patientAddress}>
+                {[patient.address, patient.zone].filter(Boolean).join(' • ')}
+              </Text>
+            )}
           </View>
           <View style={[styles.priorityBadge, { backgroundColor: priorityColor }]}>
             <Text style={styles.priorityScore}>{priorityScore}</Text>
@@ -298,6 +304,39 @@ export default function PatientListScreen() {
                 onChangeText={setFormAge}
                 keyboardType="number-pad"
               />
+              <Text style={styles.formLabel}>Endereço</Text>
+              <TextInput
+                style={styles.formInput}
+                placeholder="Rua, número, bairro..."
+                value={formAddress}
+                onChangeText={setFormAddress}
+                autoCapitalize="words"
+              />
+              <Text style={styles.formLabel}>Zona *</Text>
+              <View style={styles.zoneToggles}>
+                {ZONE_OPTIONS.map((zone) => {
+                  const isSelected = formZone === zone;
+                  return (
+                    <TouchableOpacity
+                      key={zone}
+                      style={[
+                        styles.zoneToggle,
+                        isSelected && styles.zoneToggleSelected,
+                      ]}
+                      onPress={() => setFormZone(zone)}
+                    >
+                      <Text
+                        style={[
+                          styles.zoneToggleText,
+                          isSelected && styles.zoneToggleTextSelected,
+                        ]}
+                      >
+                        {zone}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
               <Text style={styles.formLabel}>Comorbidades</Text>
               <View style={styles.comorbidityToggles}>
                 {COMORBIDITY_OPTIONS.map((item) => {
@@ -322,15 +361,6 @@ export default function PatientListScreen() {
                     </TouchableOpacity>
                   );
                 })}
-              </View>
-              <View style={styles.formSwitchRow}>
-                <Text style={styles.formLabel}>Precisa de receita médica</Text>
-                <Switch
-                  value={formNeedsPrescription}
-                  onValueChange={setFormNeedsPrescription}
-                  trackColor={{ false: '#ccc', true: '#4A90E2' }}
-                  thumbColor="#fff"
-                />
               </View>
             </ScrollView>
             <View style={styles.modalButtons}>
@@ -463,6 +493,32 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
   },
+  zoneToggles: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 14,
+  },
+  zoneToggle: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    backgroundColor: '#f9f9f9',
+  },
+  zoneToggleSelected: {
+    backgroundColor: '#4A90E2',
+    borderColor: '#4A90E2',
+  },
+  zoneToggleText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  zoneToggleTextSelected: {
+    color: '#fff',
+    fontWeight: '600',
+  },
   formSwitchRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -525,6 +581,11 @@ const styles = StyleSheet.create({
   patientAge: {
     fontSize: 14,
     color: '#666',
+  },
+  patientAddress: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 2,
   },
   priorityBadge: {
     width: 50,

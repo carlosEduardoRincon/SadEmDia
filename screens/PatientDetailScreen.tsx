@@ -182,6 +182,18 @@ export default function PatientDetailScreen() {
             <Text style={styles.label}>Idade:</Text>
             <Text style={styles.value}>{patient.age} anos</Text>
           </View>
+          {patient.address ? (
+            <View style={styles.infoRow}>
+              <Text style={styles.label}>Endereço:</Text>
+              <Text style={styles.value}>{patient.address}</Text>
+            </View>
+          ) : null}
+          {patient.zone ? (
+            <View style={styles.infoRow}>
+              <Text style={styles.label}>Zona:</Text>
+              <Text style={styles.value}>{patient.zone}</Text>
+            </View>
+          ) : null}
           <View style={styles.infoRow}>
             <Text style={styles.label}>Prioridade:</Text>
             <View style={[styles.priorityBadge, { backgroundColor: priority.priorityScore >= 50 ? '#F44336' : priority.priorityScore >= 25 ? '#FF9800' : '#4CAF50' }]}>

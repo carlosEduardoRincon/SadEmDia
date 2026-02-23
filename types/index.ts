@@ -1,4 +1,7 @@
-export type ProfessionalType = 'Medico' | 'Fisioterapeuta' | 'Fonoaudiólogo' | 'Enfermeiro';
+import type { ProfessionalType } from '../utils/professionalType';
+import type { Zone } from '../utils/zone';
+export type { ProfessionalType };
+export type { Zone };
 
 export type VisitRequestStatus = 'pending' | 'completed' | 'cancelled';
 
@@ -31,6 +34,8 @@ export interface Patient {
   id: string;
   name: string;
   age: number;
+  address?: string;
+  zone?: Zone;
   comorbidities: string[];
   needsPrescription: boolean;
   nextPrescriptionDue?: Date;
