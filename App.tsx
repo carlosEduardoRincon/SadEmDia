@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, View, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, View, StyleSheet, Text, Image } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import LoginScreen from './screens/LoginScreen';
@@ -108,10 +108,15 @@ export default function App() {
                 component={PatientListScreen}
                 options={{
                   title: 'Pacientes',
+                  headerRightContainerStyle: {
+                    paddingRight: 0,
+                  },
                   headerRight: () => (
-                    <View style={{ marginRight: 16 }}>
-                      <StatusBar style="light" />
-                    </View>
+                    <Image
+                      source={require('./assets/logo-menor.png')}
+                      style={styles.headerLogo}
+                      resizeMode="contain"
+                    />
                   ),
                 }}
               />
@@ -136,6 +141,11 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
+  headerLogo: {
+    width: 140,
+    height: 56,
+    marginRight: -30,
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',

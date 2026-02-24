@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
 } from 'react-native';
 import { loginUser, registerUser } from '../services/authService';
 import { showAlert } from '../utils/alert';
@@ -101,10 +102,11 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.content}>
-          <Text style={styles.title}>SadEmDia</Text>
-          <Text style={styles.subtitle}>
-            {isRegistering ? 'Criar Nova Conta' : 'Acesso ao Sistema'}
-          </Text>
+          <Image
+            source={require('../assets/logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
 
           {isRegistering && (
             <>
@@ -209,6 +211,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+  logo: {
+    width: 640,
+    height: 265,
+    alignSelf: 'center',
+    marginBottom: 0,
   },
   title: {
     fontSize: 32,
