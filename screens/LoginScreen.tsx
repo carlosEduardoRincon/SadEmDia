@@ -9,6 +9,7 @@ import {
   Platform,
   ScrollView,
   Image,
+  useWindowDimensions,
 } from 'react-native';
 import { loginUser, registerUser } from '../services/authService';
 import { showAlert } from '../utils/alert';
@@ -17,6 +18,11 @@ import { useAuth } from '../context/AuthContext';
 import { PROFESSIONAL_TYPE_OPTIONS, getProfessionalTypeLabel } from '../utils/professionalType';
 
 export default function LoginScreen() {
+  const { width, height } = useWindowDimensions();
+  const isMobile = width < 768;
+  const modalPercent = isMobile ? 0.8 : 0.6;
+  const modalWidth = width * modalPercent;
+  const modalMaxHeight = height * modalPercent;
   const { setUser } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -101,7 +107,7 @@ export default function LoginScreen() {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.content}>
+        <View style={[styles.content, { width: modalWidth, maxHeight: modalMaxHeight }]}>
           <Image
             source={require('../assets/logo.png')}
             style={styles.logo}
@@ -201,6 +207,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     padding: 20,
+    alignItems: 'center',
   },
   content: {
     backgroundColor: '#fff',
@@ -211,6 +218,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    alignSelf: 'center',
   },
   logo: {
     width: 640,
