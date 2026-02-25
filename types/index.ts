@@ -43,6 +43,8 @@ export interface Patient {
   lastVisitBy?: ProfessionalType;
   visits: string[];
   visitRequests: string[];
+  /** Data de admissão (se informada no cadastro); senão usa createdAt para filtros e regras. */
+  admissionDate?: Date;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -21,11 +21,16 @@ import {
   registerVisit,
   requestVisitFromProfessional,
   deletePatient,
+  getVisitsInPeriod,
+  getStartOfWeek,
+  getEndOfWeek,
 } from '../services/patientService';
 import { createPrescriptionRequest } from '../services/prescriptionRequestService';
 import { getCurrentUser } from '../services/authService';
 import { Patient, User, ProfessionalType } from '../types';
-import { calculatePatientPriority } from '../services/priorityService';
+import type { Visit } from '../types';
+import WeekVisitsIndicator from '../components/WeekVisitsIndicator';
+import { calculatePatientPriority, getAdmissionPhase } from '../services/priorityService';
 import { PROFESSIONAL_TYPE_OPTIONS, getProfessionalTypeLabel } from '../utils/professionalType';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -49,6 +54,7 @@ export default function PatientDetailScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
   const [prescriptionObservations, setPrescriptionObservations] = useState('');
+  const [visitsInPeriod, setVisitsInPeriod] = useState<Visit[]>([]);
 
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
@@ -59,12 +65,15 @@ export default function PatientDetailScreen() {
 
   const loadData = async () => {
     try {
-      const [patientData, currentUser] = await Promise.all([
+      const now = new Date();
+      const [patientData, currentUser, visits] = await Promise.all([
         getPatientById(patientId),
         getCurrentUser(),
+        getVisitsInPeriod(getStartOfWeek(now), getEndOfWeek(now)),
       ]);
       setPatient(patientData);
       setUser(currentUser);
+      setVisitsInPeriod(visits.filter((v) => v.patientId === patientId));
     } catch (error) {
       showAlert('Erro', 'Não foi possível carregar os dados do paciente');
     } finally {
@@ -209,6 +218,47 @@ export default function PatientDetailScreen() {
 
   const priority = calculatePatientPriority(patient);
 
+  const visitsByDay: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+  visitsInPeriod.forEach((v) => {
+    const d = v.date instanceof Date ? v.date : new Date(v.date);
+    const dayIndex = (d.getDay() + 6) % 7;
+    visitsByDay[dayIndex] = (visitsByDay[dayIndex] ?? 0) + 1;
+  });
+
+  const visitsSection = (
+    <View style={[styles.section, isDesktop && styles.sectionDesktopRightLast]}>
+      <Text style={styles.sectionTitle}>Visitas na semana</Text>
+      <WeekVisitsIndicator
+        variant="expanded"
+        visitsByDay={visitsByDay}
+        rows={getAdmissionPhase(patient.admissionDate ?? patient.createdAt) === 'recent' ? 2 : 1}
+      />
+      {visitsInPeriod.length > 0 ? (
+        <View style={styles.visitList}>
+          {[...visitsInPeriod]
+            .sort((a, b) => {
+              const da = a.date instanceof Date ? a.date.getTime() : new Date(a.date).getTime();
+              const db = b.date instanceof Date ? b.date.getTime() : new Date(b.date).getTime();
+              return db - da;
+            })
+            .slice(0, 10)
+            .map((visit) => (
+              <View key={visit.id} style={styles.visitListItem}>
+                <Text style={styles.value}>
+                  {format(visit.date instanceof Date ? visit.date : new Date(visit.date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                  {' — '}
+                  {getProfessionalTypeLabel(visit.professionalType)}
+                </Text>
+                {visit.notes ? (
+                  <Text style={styles.visitNotes}>{visit.notes}</Text>
+                ) : null}
+              </View>
+            ))}
+        </View>
+      ) : null}
+    </View>
+  );
+
   const infoSection = (
     <View style={[styles.section, isDesktop && styles.sectionFillHeight, isDesktop && styles.infoSectionMinHeight, styles.infoSection]}>
       <Text style={styles.sectionTitle}>Informações do Paciente</Text>
@@ -259,7 +309,7 @@ export default function PatientDetailScreen() {
   );
 
   const priorityReasonsSection = (
-    <View style={[styles.section, isDesktop && styles.sectionDesktopRightLast]}>
+    <View style={[styles.section, isDesktop && styles.sectionDesktopRight]}>
       <Text style={styles.sectionTitle}>Motivos de Prioridade</Text>
       {priority.reasons.length > 0 ? (
         priority.reasons.map((reason, index) => (
@@ -278,12 +328,13 @@ export default function PatientDetailScreen() {
       <View style={styles.content}>
         {isDesktop ? (
           <View style={styles.desktopRow}>
-            <View style={styles.desktopColLeft} collapsable={false}>
+            <View style={styles.desktopCol30}>
               {infoSection}
-            </View>
-            <View style={styles.desktopColRight} collapsable={false}>
               {comorbiditiesSection}
               {priorityReasonsSection}
+            </View>
+            <View style={styles.desktopCol70}>
+              {visitsSection}
             </View>
           </View>
         ) : (
@@ -309,6 +360,7 @@ export default function PatientDetailScreen() {
                 ))}
               </View>
             )}
+            {visitsSection}
           </>
         )}
 
@@ -589,7 +641,18 @@ const styles = StyleSheet.create({
   desktopRow: {
     flexDirection: 'row',
     marginBottom: 15,
-    alignItems: 'stretch',
+    alignItems: 'flex-start',
+    gap: 15,
+  },
+  desktopCol30: {
+    width: '30%',
+    minWidth: 0,
+    flexDirection: 'column',
+  },
+  desktopCol70: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'column',
   },
   desktopColLeft: {
     flex: 1.2,
@@ -653,7 +716,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 2,
   },
   label: {
     fontSize: 18,
@@ -698,6 +761,18 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#666',
     marginBottom: 5,
+  },
+  visitList: {
+    marginTop: 12,
+  },
+  visitListItem: {
+    marginBottom: 10,
+  },
+  visitNotes: {
+    fontSize: 16,
+    color: '#666',
+    marginTop: 4,
+    fontStyle: 'italic',
   },
   actionButton: {
     backgroundColor: '#4A90E2',

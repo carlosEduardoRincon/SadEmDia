@@ -14,10 +14,23 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { Ionicons } from '@expo/vector-icons';
+import { format, parse, isValid } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { showAlert } from '../utils/alert';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { getAllPatientsOrderedByPriority, createPatient } from '../services/patientService';
+import {
+  getAllPatientsOrderedByPriority,
+  createPatient,
+  getVisitsInPeriod,
+  getStartOfWeek,
+  getEndOfWeek,
+} from '../services/patientService';
+import { calculatePatientPriority, getAdmissionPhase } from '../services/priorityService';
 import { PatientPriority } from '../types';
+import type { Visit } from '../types';
+import WeekVisitsIndicator from '../components/WeekVisitsIndicator';
 import { ZONE_OPTIONS } from '../utils/zone';
 import type { Zone } from '../types';
 
@@ -30,6 +43,7 @@ const COMORBIDITY_OPTIONS = [
 export default function PatientListScreen() {
   const navigation = useNavigation();
   const [patients, setPatients] = useState<PatientPriority[]>([]);
+  const [visitsThisWeek, setVisitsThisWeek] = useState<Visit[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -39,33 +53,80 @@ export default function PatientListScreen() {
   const [formNeedsPrescription, setFormNeedsPrescription] = useState(false);
   const [formAddress, setFormAddress] = useState('');
   const [formZone, setFormZone] = useState<Zone | null>(null);
+  const [formDate, setFormDate] = useState<Date | null>(null);
+  const [formDateStr, setFormDateStr] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [filterComorbidity, setFilterComorbidity] = useState<string | null>(null);
   const [filterZone, setFilterZone] = useState<Zone | null>(null);
   const [filterAdmission, setFilterAdmission] = useState<'recent' | 'second_week' | 'after_two_weeks' | null>(null);
 
+  /** Agrupa visitas da semana por patientId e dia (0=Seg .. 6=Dom). */
+  const visitsByPatientId = useMemo(() => {
+    const map = new Map<string, Record<number, number>>();
+    const now = new Date();
+    const start = getStartOfWeek(now);
+    const end = getEndOfWeek(now);
+    visitsThisWeek.forEach((v) => {
+      const d = v.date instanceof Date ? v.date : new Date(v.date);
+      if (d < start || d > end) return;
+      const dayIndex = (d.getDay() + 6) % 7;
+      const pid = v.patientId;
+      if (!map.has(pid)) {
+        map.set(pid, { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 });
+      }
+      const row = map.get(pid)!;
+      row[dayIndex] = (row[dayIndex] ?? 0) + 1;
+    });
+    return map;
+  }, [visitsThisWeek]);
+
+  /** Contagem de visitas hoje e esta semana por paciente (para regras de admissão). */
+  const visitCountsByPatientId = useMemo(() => {
+    const map = new Map<string, { visitsToday: number; visitsThisWeek: number }>();
+    const now = new Date();
+    const todayIndex = (now.getDay() + 6) % 7;
+    visitsByPatientId.forEach((byDay, patientId) => {
+      const visitsToday = byDay[todayIndex] ?? 0;
+      const visitsThisWeek = Object.values(byDay).reduce((a, b) => a + b, 0);
+      map.set(patientId, { visitsToday, visitsThisWeek });
+    });
+    return map;
+  }, [visitsByPatientId]);
+
+  /** Prioridades recalculadas com regras de visita por fase de admissão. */
+  const enrichedPatients = useMemo(() => {
+    return patients
+      .map(({ patient }) => {
+        const counts = visitCountsByPatientId.get(patient.id) ?? { visitsToday: 0, visitsThisWeek: 0 };
+        return calculatePatientPriority(patient, new Date(), counts);
+      })
+      .sort((a, b) => b.priorityScore - a.priorityScore);
+  }, [patients, visitCountsByPatientId]);
+
   const filteredPatients = useMemo(() => {
     const now = Date.now();
     const msPerDay = 24 * 60 * 60 * 1000;
-    return patients.filter(({ patient }) => {
+    return enrichedPatients.filter(({ patient }) => {
       if (filterComorbidity != null) {
         if (!patient.comorbidities?.includes(filterComorbidity)) return false;
       }
       if (filterZone != null) {
         if (patient.zone !== filterZone) return false;
       }
-      if (filterAdmission != null && patient.createdAt) {
-        const created = patient.createdAt instanceof Date
-          ? patient.createdAt.getTime()
-          : new Date(patient.createdAt).getTime();
-        const daysSinceCreation = (now - created) / msPerDay;
+      const admissionRef = patient.admissionDate ?? patient.createdAt;
+      if (filterAdmission != null && admissionRef) {
+        const refTime = admissionRef instanceof Date
+          ? admissionRef.getTime()
+          : new Date(admissionRef).getTime();
+        const daysSinceCreation = (now - refTime) / msPerDay;
         if (filterAdmission === 'recent' && daysSinceCreation >= 7) return false;
         if (filterAdmission === 'second_week' && (daysSinceCreation < 7 || daysSinceCreation >= 14)) return false;
         if (filterAdmission === 'after_two_weeks' && daysSinceCreation < 14) return false;
       }
       return true;
     });
-  }, [patients, filterComorbidity, filterZone, filterAdmission]);
+  }, [enrichedPatients, filterComorbidity, filterZone, filterAdmission]);
 
   const hasActiveFilters =
     filterComorbidity != null ||
@@ -93,8 +154,13 @@ export default function PatientListScreen() {
 
   const loadPatients = async () => {
     try {
-      const data = await getAllPatientsOrderedByPriority();
+      const now = new Date();
+      const [data, visits] = await Promise.all([
+        getAllPatientsOrderedByPriority(),
+        getVisitsInPeriod(getStartOfWeek(now), getEndOfWeek(now)),
+      ]);
       setPatients(data);
+      setVisitsThisWeek(visits);
     } catch (error) {
       showAlert('Erro', 'Não foi possível carregar a lista de pacientes');
       console.error(error);
@@ -117,6 +183,34 @@ export default function PatientListScreen() {
     setFormNeedsPrescription(false);
     setFormAddress('');
     setFormZone(null);
+    setFormDate(null);
+    setFormDateStr('');
+    setShowDatePicker(false);
+  };
+
+  const handleDateStrChange = (text: string) => {
+    const digits = text.replace(/\D/g, '');
+    let masked = '';
+    if (digits.length > 0) masked = digits.slice(0, 2);
+    if (digits.length > 2) masked += '/' + digits.slice(2, 4);
+    if (digits.length > 4) masked += '/' + digits.slice(4, 8);
+    setFormDateStr(masked);
+    if (masked.length === 10) {
+      const parsed = parse(masked, 'dd/MM/yyyy', new Date(), { locale: ptBR });
+      if (isValid(parsed)) setFormDate(parsed);
+      else setFormDate(null);
+    } else {
+      setFormDate(null);
+    }
+  };
+
+  const handleDatePickerSelect = (date: Date) => {
+    setFormDate(date);
+    setFormDateStr(format(date, 'dd/MM/yyyy', { locale: ptBR }));
+  };
+
+  const openCalendar = () => {
+    setTimeout(() => setShowDatePicker(true), 50);
   };
 
   const toggleComorbidity = (item: string) => {
@@ -149,6 +243,7 @@ export default function PatientListScreen() {
         zone: formZone,
         comorbidities: formComorbidities,
         needsPrescription: formNeedsPrescription,
+        admissionDate: formDate || undefined,
       });
       showAlert('Sucesso', 'Paciente cadastrado com sucesso');
       closeAddForm();
@@ -216,6 +311,14 @@ export default function PatientListScreen() {
             Última visita: {new Date(patient.lastVisit).toLocaleDateString('pt-BR')}
           </Text>
         )}
+
+        <View style={styles.weekVisitsWrap}>
+          <WeekVisitsIndicator
+            variant="compact"
+            visitsByDay={visitsByPatientId.get(patient.id) ?? {}}
+            rows={getAdmissionPhase(patient.admissionDate ?? patient.createdAt) === 'recent' ? 2 : 1}
+          />
+        </View>
       </TouchableOpacity>
     );
   };
@@ -384,6 +487,77 @@ export default function PatientListScreen() {
                 onChangeText={setFormAddress}
                 autoCapitalize="words"
               />
+              <Text style={styles.formLabel}>Data de admissão</Text>
+              <View style={styles.dateFieldRow}>
+                <TextInput
+                  style={[styles.formInput, styles.dateInput]}
+                  placeholder="dd/mm/aaaa"
+                  value={formDateStr}
+                  onChangeText={handleDateStrChange}
+                  placeholderTextColor="#999"
+                  keyboardType="number-pad"
+                  maxLength={10}
+                />
+                {Platform.OS === 'web' ? (
+                  <View style={styles.dateIconWrap}>
+                    <input
+                      id="add-patient-date-input"
+                      type="date"
+                      value={formDate ? format(formDate, 'yyyy-MM-dd') : ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val) handleDatePickerSelect(new Date(val + 'T12:00:00'));
+                      }}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        width: '100%',
+                        height: '100%',
+                        opacity: 0,
+                        cursor: 'pointer',
+                        zIndex: 1,
+                      }}
+                    />
+                    <Ionicons name="calendar-outline" size={22} color="#666" />
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.dateIconWrap}
+                    onPress={openCalendar}
+                    activeOpacity={0.7}
+                    hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
+                  >
+                    <Ionicons name="calendar-outline" size={22} color="#666" />
+                  </TouchableOpacity>
+                )}
+              </View>
+              {Platform.OS !== 'web' && showDatePicker && (
+                <View style={styles.datePickerWrap}>
+                  <DateTimePicker
+                    value={formDate || new Date()}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={(_, selectedDate) => {
+                      if (selectedDate) {
+                        handleDatePickerSelect(selectedDate);
+                        if (Platform.OS === 'android') setShowDatePicker(false);
+                      }
+                    }}
+                    locale="pt-BR"
+                  />
+                  {Platform.OS === 'ios' && (
+                    <TouchableOpacity
+                      style={styles.dateConfirmBtn}
+                      onPress={() => setShowDatePicker(false)}
+                    >
+                      <Text style={styles.dateConfirmBtnText}>Confirmar</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
               <Text style={styles.formLabel}>Zona *</Text>
               <View style={styles.zoneToggles}>
                 {ZONE_OPTIONS.map((zone) => {
@@ -585,6 +759,45 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     backgroundColor: '#f9f9f9',
   },
+  dateFieldRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    backgroundColor: '#f9f9f9',
+    marginBottom: 14,
+    paddingRight: 8,
+  },
+  dateInput: {
+    flex: 1,
+    marginBottom: 0,
+    borderWidth: 0,
+    backgroundColor: 'transparent',
+  },
+  dateIconWrap: {
+    position: 'relative',
+    minWidth: 44,
+    minHeight: 44,
+    padding: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  datePickerWrap: {
+    marginBottom: 14,
+  },
+  dateConfirmBtn: {
+    marginTop: 10,
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: '#4A90E2',
+    alignItems: 'center',
+  },
+  dateConfirmBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   comorbidityToggles: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -775,6 +988,9 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 8,
     fontStyle: 'italic',
+  },
+  weekVisitsWrap: {
+    marginTop: 10,
   },
   loadingContainer: {
     flex: 1,

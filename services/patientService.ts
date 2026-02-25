@@ -11,6 +11,7 @@ import {
   where,
   Timestamp,
 } from 'firebase/firestore';
+import { startOfWeek, endOfWeek } from 'date-fns';
 import { getDb } from '../firebase.config';
 import { Patient, Visit, VisitRequest, ProfessionalType } from '../types';
 import { calculatePatientPriority, sortPatientsByPriority } from './priorityService';
@@ -29,6 +30,48 @@ function timestampToDate(timestamp: any): Date | undefined {
 function dateToTimestamp(date: Date | undefined): Timestamp | null {
   if (!date) return null;
   return Timestamp.fromDate(date);
+}
+
+/** Semana Segunda–Domingo (weekStartsOn: 1). */
+export function getStartOfWeek(date: Date): Date {
+  return startOfWeek(date, { weekStartsOn: 1 });
+}
+
+/** Semana Segunda–Domingo; retorna fim do domingo. */
+export function getEndOfWeek(date: Date): Date {
+  return endOfWeek(date, { weekStartsOn: 1 });
+}
+
+export async function getVisitsInPeriod(startDate: Date, endDate: Date): Promise<Visit[]> {
+  try {
+    const db = getDb();
+    const q = query(
+      collection(db, VISITS_COLLECTION),
+      where('date', '>=', dateToTimestamp(startDate)),
+      where('date', '<=', dateToTimestamp(endDate)),
+      orderBy('date', 'desc')
+    );
+    const snapshot = await getDocs(q);
+    const visits: Visit[] = [];
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      visits.push({
+        id: docSnap.id,
+        patientId: data.patientId,
+        professionalId: data.professionalId,
+        professionalType: data.professionalType,
+        date: timestampToDate(data.date) || new Date(),
+        notes: data.notes,
+        visitRequestId: data.visitRequestId,
+        prescriptionDelivered: data.prescriptionDelivered,
+        nextPrescriptionDue: timestampToDate(data.nextPrescriptionDue),
+      });
+    });
+    return visits;
+  } catch (error) {
+    console.error('Erro ao buscar visitas no período:', error);
+    throw error;
+  }
 }
 
 export async function getAllPatientsOrderedByPriority(): Promise<Array<{
@@ -56,6 +99,7 @@ export async function getAllPatientsOrderedByPriority(): Promise<Array<{
         lastVisitBy: data.lastVisitBy,
         visits: data.visits || [],
         visitRequests: data.visitRequests || [],
+        admissionDate: timestampToDate(data.admissionDate),
         createdAt: timestampToDate(data.createdAt) || new Date(),
         updatedAt: timestampToDate(data.updatedAt) || new Date(),
       });
@@ -92,6 +136,7 @@ export async function getPatientById(patientId: string): Promise<Patient | null>
       lastVisitBy: data.lastVisitBy,
       visits: data.visits || [],
       visitRequests: data.visitRequests || [],
+      admissionDate: timestampToDate(data.admissionDate),
       createdAt: timestampToDate(data.createdAt) || new Date(),
       updatedAt: timestampToDate(data.updatedAt) || new Date(),
     };
@@ -109,6 +154,7 @@ export async function createPatient(patientData: Omit<Patient, 'id' | 'createdAt
       ...patientData,
       visits: [],
       visitRequests: [],
+      admissionDate: patientData.admissionDate ? dateToTimestamp(patientData.admissionDate) : null,
       createdAt: dateToTimestamp(now),
       updatedAt: dateToTimestamp(now),
     });
