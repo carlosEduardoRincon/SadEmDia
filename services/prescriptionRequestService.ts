@@ -28,7 +28,8 @@ export async function createPrescriptionRequest(
   patientId: string,
   patientName: string,
   requestedBy: string,
-  requestedByName: string
+  requestedByName: string,
+  observations?: string
 ): Promise<string> {
   const db = getDb();
   const now = new Date();
@@ -39,6 +40,9 @@ export async function createPrescriptionRequest(
     requestedByName,
     status: 'pending',
     createdAt: dateToTimestamp(now),
+    observations: observations || null,
+    recipeCreated: false,
+    recipeDelivered: false,
   });
   return docRef.id;
 }
@@ -53,6 +57,8 @@ export async function getAllPrescriptionRequests(): Promise<PrescriptionRequest[
   const requests: PrescriptionRequest[] = [];
   snapshot.forEach((docSnap) => {
     const data = docSnap.data();
+    const recipeCreated = !!data.recipeCreated;
+    const recipeDelivered = !!data.recipeDelivered;
     requests.push({
       id: docSnap.id,
       patientId: data.patientId,
@@ -62,9 +68,30 @@ export async function getAllPrescriptionRequests(): Promise<PrescriptionRequest[
       status: data.status || 'pending',
       createdAt: timestampToDate(data.createdAt) || new Date(),
       fulfilledAt: timestampToDate(data.fulfilledAt),
+      observations: data.observations || undefined,
+      recipeCreated,
+      recipeDelivered,
     });
   });
   return requests;
+}
+
+export async function updatePrescriptionRequestChecks(
+  requestId: string,
+  recipeCreated: boolean,
+  recipeDelivered: boolean
+): Promise<void> {
+  const db = getDb();
+  const ref = doc(db, PRESCRIPTION_REQUESTS_COLLECTION, requestId);
+  const updates: Record<string, unknown> = {
+    recipeCreated,
+    recipeDelivered,
+  };
+  if (recipeCreated && recipeDelivered) {
+    updates.status = 'fulfilled';
+    updates.fulfilledAt = dateToTimestamp(new Date());
+  }
+  await updateDoc(ref, updates);
 }
 
 export async function fulfillPrescriptionRequest(requestId: string): Promise<void> {

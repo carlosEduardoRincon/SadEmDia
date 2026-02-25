@@ -9,6 +9,8 @@ import {
   ActivityIndicator,
   Switch,
   Platform,
+  Modal,
+  KeyboardAvoidingView,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { showAlert } from '../utils/alert';
@@ -44,6 +46,8 @@ export default function PatientDetailScreen() {
   const [prescriptionDelivered, setPrescriptionDelivered] = useState(false);
   const [nextPrescriptionDue, setNextPrescriptionDue] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
+  const [prescriptionObservations, setPrescriptionObservations] = useState('');
 
   useEffect(() => {
     loadData();
@@ -133,6 +137,12 @@ export default function PatientDetailScreen() {
     }
   };
 
+  const openPrescriptionModal = () => setShowPrescriptionModal(true);
+  const closePrescriptionModal = () => {
+    setShowPrescriptionModal(false);
+    setPrescriptionObservations('');
+  };
+
   const handleRequestPrescription = async () => {
     if (!user || !patient) return;
     setSubmitting(true);
@@ -141,12 +151,14 @@ export default function PatientDetailScreen() {
         patient.id,
         patient.name,
         user.id,
-        user.name
+        user.name,
+        prescriptionObservations.trim() || undefined
       );
       showAlert(
         'Sucesso',
-        'Solicitação de receita registrada. Ela aparecerá em "Solicitações Receitas" no menu.'
+        'Solicitação de receita registrada. Ela aparecerá em "Solicitações de Receitas" no menu.'
       );
+      closePrescriptionModal();
       loadData();
     } catch (error) {
       showAlert('Erro', 'Não foi possível registrar a solicitação de receita');
@@ -404,11 +416,55 @@ export default function PatientDetailScreen() {
 
           <TouchableOpacity
             style={[styles.actionButton, styles.prescriptionButton]}
-            onPress={handleRequestPrescription}
+            onPress={openPrescriptionModal}
             disabled={submitting}
           >
             <Text style={styles.actionButtonText}>📋 Solicitar receita</Text>
           </TouchableOpacity>
+
+          <Modal
+            visible={showPrescriptionModal}
+            transparent
+            animationType="slide"
+            onRequestClose={closePrescriptionModal}
+          >
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              style={styles.modalOverlay}
+            >
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Solicitar receita</Text>
+                <Text style={styles.formLabel}>Observações da receita (opcional)</Text>
+                <TextInput
+                  style={styles.textArea}
+                  placeholder="Ex.: medicamento, dosagem, orientações..."
+                  value={prescriptionObservations}
+                  onChangeText={setPrescriptionObservations}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                />
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.modalButtonCancel]}
+                    onPress={closePrescriptionModal}
+                    disabled={submitting}
+                  >
+                    <Text style={styles.modalButtonCancelText}>Cancelar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.modalButtonSave]}
+                    onPress={handleRequestPrescription}
+                    disabled={submitting}
+                  >
+                    <Text style={styles.modalButtonSaveText}>
+                      {submitting ? 'Salvando...' : 'Solicitar'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </KeyboardAvoidingView>
+          </Modal>
 
           {!showRequestForm ? (
             <TouchableOpacity
@@ -729,6 +785,51 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  modalButton: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  modalButtonCancel: {
+    backgroundColor: '#e0e0e0',
+  },
+  modalButtonCancelText: {
+    color: '#333',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalButtonSave: {
+    backgroundColor: '#4A90E2',
+  },
+  modalButtonSaveText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   loadingContainer: {
     flex: 1,

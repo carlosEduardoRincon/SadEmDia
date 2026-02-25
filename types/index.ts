@@ -72,4 +72,7 @@ export interface PrescriptionRequest {
   status: PrescriptionRequestStatus;
   createdAt: Date;
   fulfilledAt?: Date;
+  observations?: string;
+  recipeCreated?: boolean;
+  recipeDelivered?: boolean;
 }

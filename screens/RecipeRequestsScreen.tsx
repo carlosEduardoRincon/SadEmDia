@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,17 +7,12 @@ import {
   RefreshControl,
   ActivityIndicator,
   TouchableOpacity,
+  Switch,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { getAllPrescriptionRequests, fulfillPrescriptionRequest } from '../services/prescriptionRequestService';
+import { getAllPrescriptionRequests, updatePrescriptionRequestChecks } from '../services/prescriptionRequestService';
 import type { PrescriptionRequest } from '../types';
 import { showAlert } from '../utils/alert';
-
-const STATUS_LABELS: Record<string, string> = {
-  pending: 'Pendente',
-  fulfilled: 'Atendida',
-  cancelled: 'Cancelada',
-};
 
 export default function RecipeRequestsScreen() {
   const [requests, setRequests] = useState<PrescriptionRequest[]>([]);
@@ -37,6 +32,51 @@ export default function RecipeRequestsScreen() {
     }
   }, []);
 
+  const visibleRequests = useMemo(
+    () => requests.filter((r) => !(r.recipeCreated && r.recipeDelivered)),
+    [requests]
+  );
+
+  const handleToggleCheck = useCallback(
+    (item: PrescriptionRequest, field: 'recipeCreated' | 'recipeDelivered', value: boolean) => {
+      const newCreated = field === 'recipeCreated' ? value : item.recipeCreated ?? false;
+      const newDelivered = field === 'recipeDelivered' ? value : item.recipeDelivered ?? false;
+      const bothChecked = newCreated && newDelivered;
+
+      if (bothChecked) {
+        showAlert(
+          'Receita entregue',
+          'Confirmar que a receita foi entregue? Ela será removida da listagem.',
+          [
+            { text: 'Cancelar', style: 'cancel' },
+            {
+              text: 'Confirmar',
+              onPress: async () => {
+                try {
+                  await updatePrescriptionRequestChecks(item.id, newCreated, newDelivered);
+                  await loadRequests();
+                } catch (error) {
+                  showAlert('Erro', 'Não foi possível atualizar a solicitação');
+                }
+              },
+            },
+          ]
+        );
+        return;
+      }
+
+      (async () => {
+        try {
+          await updatePrescriptionRequestChecks(item.id, newCreated, newDelivered);
+          await loadRequests();
+        } catch (error) {
+          showAlert('Erro', 'Não foi possível atualizar a solicitação');
+        }
+      })();
+    },
+    [loadRequests]
+  );
+
   useFocusEffect(
     useCallback(() => {
       setRefreshing(true);
@@ -49,39 +89,19 @@ export default function RecipeRequestsScreen() {
     loadRequests();
   }, [loadRequests]);
 
-  const handleFulfill = (item: PrescriptionRequest) => {
-    if (item.status !== 'pending') return;
-    showAlert(
-      'Atender solicitação',
-      `Marcar a solicitação de receita de ${item.patientName} como atendida?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Atender',
-          onPress: async () => {
-            try {
-              await fulfillPrescriptionRequest(item.id);
-              await loadRequests();
-              showAlert('Sucesso', 'Solicitação marcada como atendida');
-            } catch (error) {
-              showAlert('Erro', 'Não foi possível atualizar a solicitação');
-            }
-          },
-        },
-      ]
-    );
-  };
-
   const renderItem = ({ item }: { item: PrescriptionRequest }) => {
-    const isPending = item.status === 'pending';
+    const recipeCreated = item.recipeCreated ?? false;
+    const recipeDelivered = item.recipeDelivered ?? false;
     return (
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <Text style={styles.patientName}>{item.patientName}</Text>
-          <View style={[styles.statusBadge, isPending ? styles.statusPending : styles.statusFulfilled]}>
-            <Text style={styles.statusText}>{STATUS_LABELS[item.status] || item.status}</Text>
-          </View>
         </View>
+        {item.observations ? (
+          <Text style={styles.observations}>
+            Observações: {item.observations}
+          </Text>
+        ) : null}
         <Text style={styles.meta}>
           Solicitado por {item.requestedByName}
         </Text>
@@ -94,14 +114,27 @@ export default function RecipeRequestsScreen() {
             minute: '2-digit',
           })}
         </Text>
-        {isPending && (
-          <TouchableOpacity
-            style={styles.fulfillButton}
-            onPress={() => handleFulfill(item)}
-          >
-            <Text style={styles.fulfillButtonText}>Marcar como atendida</Text>
-          </TouchableOpacity>
-        )}
+        <View style={styles.checkRow}>
+          <Text style={styles.checkLabel}>Receita criada</Text>
+          <Switch
+            value={recipeCreated}
+            onValueChange={(value) => handleToggleCheck(item, 'recipeCreated', value)}
+            trackColor={{ false: '#ddd', true: '#4A90E2' }}
+            thumbColor="#fff"
+          />
+        </View>
+        <View style={[styles.checkRow, !recipeCreated && styles.checkRowDisabled]}>
+          <Text style={[styles.checkLabel, !recipeCreated && styles.checkLabelDisabled]}>
+            Receita entregue
+          </Text>
+          <Switch
+            value={recipeDelivered}
+            onValueChange={(value) => handleToggleCheck(item, 'recipeDelivered', value)}
+            trackColor={{ false: '#ddd', true: '#4A90E2' }}
+            thumbColor="#fff"
+            disabled={!recipeCreated}
+          />
+        </View>
       </View>
     );
   };
@@ -118,7 +151,7 @@ export default function RecipeRequestsScreen() {
   return (
     <View style={styles.container}>
       <FlatList
-        data={requests}
+        data={visibleRequests}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
@@ -197,17 +230,31 @@ const styles = StyleSheet.create({
     color: '#999',
     marginBottom: 12,
   },
-  fulfillButton: {
-    backgroundColor: '#4A90E2',
-    borderRadius: 8,
-    padding: 12,
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  fulfillButtonText: {
-    color: '#fff',
+  observations: {
     fontSize: 14,
-    fontWeight: '600',
+    color: '#555',
+    marginBottom: 8,
+    fontStyle: 'italic',
+  },
+  checkRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  checkLabel: {
+    fontSize: 15,
+    color: '#333',
+    fontWeight: '500',
+  },
+  checkRowDisabled: {
+    opacity: 0.6,
+  },
+  checkLabelDisabled: {
+    color: '#999',
   },
   loadingContainer: {
     flex: 1,
