@@ -19,6 +19,7 @@ import {
   requestVisitFromProfessional,
   deletePatient,
 } from '../services/patientService';
+import { createPrescriptionRequest } from '../services/prescriptionRequestService';
 import { getCurrentUser } from '../services/authService';
 import { Patient, User, ProfessionalType } from '../types';
 import { calculatePatientPriority } from '../services/priorityService';
@@ -127,6 +128,29 @@ export default function PatientDetailScreen() {
       loadData();
     } catch (error) {
       showAlert('Erro', 'Não foi possível criar a solicitação');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleRequestPrescription = async () => {
+    if (!user || !patient) return;
+    setSubmitting(true);
+    try {
+      await createPrescriptionRequest(
+        patient.id,
+        patient.name,
+        user.id,
+        user.name
+      );
+      showAlert(
+        'Sucesso',
+        'Solicitação de receita registrada. Ela aparecerá em "Solicitações Receitas" no menu.'
+      );
+      loadData();
+    } catch (error) {
+      showAlert('Erro', 'Não foi possível registrar a solicitação de receita');
+      console.error(error);
     } finally {
       setSubmitting(false);
     }
@@ -378,6 +402,14 @@ export default function PatientDetailScreen() {
             </View>
           )}
 
+          <TouchableOpacity
+            style={[styles.actionButton, styles.prescriptionButton]}
+            onPress={handleRequestPrescription}
+            disabled={submitting}
+          >
+            <Text style={styles.actionButtonText}>📋 Solicitar receita</Text>
+          </TouchableOpacity>
+
           {!showRequestForm ? (
             <TouchableOpacity
               style={[styles.actionButton, styles.requestButton]}
@@ -542,6 +574,9 @@ const styles = StyleSheet.create({
   },
   requestButton: {
     backgroundColor: '#FF9800',
+  },
+  prescriptionButton: {
+    backgroundColor: '#5C6BC0',
   },
   removeButton: {
     backgroundColor: 'transparent',

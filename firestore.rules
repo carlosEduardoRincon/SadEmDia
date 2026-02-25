@@ -48,5 +48,13 @@ service cloud.firestore {
       allow update: if isAuthenticated();
       allow delete: if false; // Não permitir deletar solicitações
     }
+
+    // Collection: prescriptionRequests (solicitações de receita)
+    match /prescriptionRequests/{requestId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if false;
+    }
   }
 }

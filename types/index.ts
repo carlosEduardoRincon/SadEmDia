@@ -60,3 +60,16 @@ export interface PatientPriority {
   priorityScore: number;
   reasons: string[];
 }
+
+export type PrescriptionRequestStatus = 'pending' | 'fulfilled' | 'cancelled';
+
+export interface PrescriptionRequest {
+  id: string;
+  patientId: string;
+  patientName: string;
+  requestedBy: string;
+  requestedByName: string;
+  status: PrescriptionRequestStatus;
+  createdAt: Date;
+  fulfilledAt?: Date;
+}

@@ -1,17 +1,22 @@
-import React, { useEffect, useState } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import React, { useEffect, useState, useRef } from 'react';
+import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, View, StyleSheet, Text, Image } from 'react-native';
+import { ActivityIndicator, View, StyleSheet, Text } from 'react-native';
+import { getProfessionalTypeLabel } from './utils/professionalType';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import LoginScreen from './screens/LoginScreen';
 import PatientListScreen from './screens/PatientListScreen';
 import PatientDetailScreen from './screens/PatientDetailScreen';
+import RecipeRequestsScreen from './screens/RecipeRequestsScreen';
+import HamburgerButton from './components/HamburgerButton';
+import Sidebar from './components/Sidebar';
 import { onAuthStateChange } from './services/authService';
 import { getApp } from './firebase.config';
 import { User } from './types';
 import { AuthContextProvider } from './context/AuthContext';
+import { SidebarProvider } from './context/SidebarContext';
 
 const Stack = createNativeStackNavigator();
 
@@ -19,6 +24,8 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentRouteName, setCurrentRouteName] = useState<string>('PatientList');
+  const navigationRef = useNavigationContainerRef();
 
   useEffect(() => {
     let unsubscribe: (() => void) | null = null;
@@ -88,63 +95,104 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <AuthContextProvider value={{ setUser }}>
-        <NavigationContainer>
-          <StatusBar style="auto" />
-          <Stack.Navigator
-          screenOptions={{
-            headerStyle: {
-              backgroundColor: '#4A90E2',
-            },
-            headerTintColor: '#fff',
-            headerTitleStyle: {
-              fontWeight: 'bold',
-            },
-          }}
-        >
-          {user ? (
-            <>
-              <Stack.Screen
-                name="PatientList"
-                component={PatientListScreen}
-                options={{
-                  title: 'Pacientes',
-                  headerRightContainerStyle: {
-                    paddingRight: 0,
-                  },
-                  headerRight: () => (
-                    <Image
-                      source={require('./assets/logo-menor.png')}
-                      style={styles.headerLogo}
-                      resizeMode="contain"
+        <SidebarProvider>
+          <NavigationContainer
+            ref={navigationRef}
+            onStateChange={(state) => {
+              if (!state) return;
+              const route = state.routes[state.index];
+              if (route?.name) setCurrentRouteName(route.name);
+            }}
+          >
+            <StatusBar style="auto" />
+            {user ? (
+              <View style={styles.mainLayout}>
+                <Sidebar
+                  currentScreen={currentRouteName}
+                  onNavigate={(name) => navigationRef.current?.navigate(name as never)}
+                />
+                <View style={styles.content}>
+                  <Stack.Navigator
+                    screenOptions={{
+                      headerStyle: {
+                        backgroundColor: '#4A90E2',
+                      },
+                      headerTintColor: '#fff',
+                      headerTitleStyle: {
+                        fontWeight: 'bold',
+                      },
+                    }}
+                  >
+                    <Stack.Screen
+                      name="PatientList"
+                      component={PatientListScreen}
+                      options={{
+                        headerTitle: '',
+                        headerLeft: () => (
+                          <View style={styles.headerLeft}>
+                            <HamburgerButton />
+                            <Text style={styles.headerGreeting} numberOfLines={1}>
+                              Olá, {user?.name ?? ''} ({user ? getProfessionalTypeLabel(user.professionalType) : ''})
+                            </Text>
+                          </View>
+                        ),
+                      }}
                     />
-                  ),
-                }}
-              />
-              <Stack.Screen
-                name="PatientDetail"
-                component={PatientDetailScreen}
-                options={{ title: 'Detalhes do Paciente' }}
-              />
-            </>
-          ) : (
-            <Stack.Screen
-              name="Login"
-              component={LoginScreen}
-              options={{ headerShown: false }}
-            />
-          )}
-        </Stack.Navigator>
-        </NavigationContainer>
+                    <Stack.Screen
+                      name="RecipeRequests"
+                      component={RecipeRequestsScreen}
+                      options={{
+                        headerTitle: '',
+                        headerLeft: () => (
+                          <View style={styles.headerLeft}>
+                            <HamburgerButton />
+                            <Text style={styles.headerGreeting} numberOfLines={1}>
+                              Olá, {user?.name ?? ''} ({user ? getProfessionalTypeLabel(user.professionalType) : ''})
+                            </Text>
+                          </View>
+                        ),
+                      }}
+                    />
+                    <Stack.Screen
+                      name="PatientDetail"
+                      component={PatientDetailScreen}
+                      options={{ title: 'Detalhes do Paciente' }}
+                    />
+                  </Stack.Navigator>
+                </View>
+              </View>
+            ) : (
+              <Stack.Navigator screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="Login" component={LoginScreen} />
+              </Stack.Navigator>
+            )}
+          </NavigationContainer>
+        </SidebarProvider>
       </AuthContextProvider>
     </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  headerLogo: {
-    width: 140,
-    height: 56,
-    marginRight: -30,
+  mainLayout: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  content: {
+    flex: 1,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    minWidth: 0,
+  },
+  headerGreeting: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,

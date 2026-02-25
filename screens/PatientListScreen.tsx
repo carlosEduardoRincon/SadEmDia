@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -18,10 +18,6 @@ import { showAlert } from '../utils/alert';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { getAllPatientsOrderedByPriority, createPatient } from '../services/patientService';
 import { PatientPriority } from '../types';
-import { getCurrentUser, logoutUser } from '../services/authService';
-import { User } from '../types';
-import { useAuth } from '../context/AuthContext';
-import { getProfessionalTypeLabel } from '../utils/professionalType';
 import { ZONE_OPTIONS } from '../utils/zone';
 import type { Zone } from '../types';
 
@@ -33,11 +29,9 @@ const COMORBIDITY_OPTIONS = [
 
 export default function PatientListScreen() {
   const navigation = useNavigation();
-  const { setUser } = useAuth();
   const [patients, setPatients] = useState<PatientPriority[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [user, setUserLocal] = useState<User | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [formName, setFormName] = useState('');
   const [formAge, setFormAge] = useState('');
@@ -90,21 +84,12 @@ export default function PatientListScreen() {
     { value: 'after_two_weeks', label: 'Após duas semanas' },
   ];
 
-  useEffect(() => {
-    loadUser();
-  }, []);
-
   useFocusEffect(
     useCallback(() => {
       setRefreshing(true);
       loadPatients();
     }, [])
   );
-
-  const loadUser = async () => {
-    const currentUser = await getCurrentUser();
-    setUserLocal(currentUser);
-  };
 
   const loadPatients = async () => {
     try {
@@ -174,28 +159,6 @@ export default function PatientListScreen() {
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const handleLogout = () => {
-    showAlert(
-      'Confirmar saída',
-      'Deseja realmente sair?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Sair',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await logoutUser();
-              setUser(null);
-            } catch (error) {
-              showAlert('Erro', 'Não foi possível fazer logout');
-            }
-          },
-        },
-      ]
-    );
   };
 
   const renderPatientItem = ({ item }: { item: PatientPriority }) => {
@@ -268,17 +231,6 @@ export default function PatientListScreen() {
 
   return (
     <View style={styles.container}>
-      {user && (
-        <View style={styles.userInfo}>
-          <Text style={styles.userText}>
-            Olá, {user.name} ({getProfessionalTypeLabel(user.professionalType)})
-          </Text>
-          <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-            <Text style={styles.logoutText}>Sair</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
       <View style={styles.filterSection}>
         <Text style={styles.filterSectionTitle}>Filtros</Text>
         <Text style={styles.filterLabel}>Comorbidade</Text>
@@ -512,31 +464,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
-  },
-  userInfo: {
-    backgroundColor: '#4A90E2',
-    padding: 15,
-    paddingTop: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  userText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-    flex: 1,
-  },
-  logoutButton: {
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  logoutText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
   },
   filterSection: {
     backgroundColor: '#fff',
