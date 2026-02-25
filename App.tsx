@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, View, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, View, StyleSheet, Text, useWindowDimensions } from 'react-native';
 import { getProfessionalTypeLabel } from './utils/professionalType';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -12,6 +12,9 @@ import PatientDetailScreen from './screens/PatientDetailScreen';
 import RecipeRequestsScreen from './screens/RecipeRequestsScreen';
 import HamburgerButton from './components/HamburgerButton';
 import Sidebar from './components/Sidebar';
+import BottomBar from './components/BottomBar';
+
+const MOBILE_BREAKPOINT = 768;
 import { onAuthStateChange } from './services/authService';
 import { getApp } from './firebase.config';
 import { User } from './types';
@@ -21,6 +24,8 @@ import { SidebarProvider } from './context/SidebarContext';
 const Stack = createNativeStackNavigator();
 
 export default function App() {
+  const { width } = useWindowDimensions();
+  const isMobile = width < MOBILE_BREAKPOINT;
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -106,11 +111,13 @@ export default function App() {
           >
             <StatusBar style="auto" />
             {user ? (
-              <View style={styles.mainLayout}>
-                <Sidebar
-                  currentScreen={currentRouteName}
-                  onNavigate={(name) => navigationRef.current?.navigate(name as never)}
-                />
+              <View style={[styles.mainLayout, isMobile && styles.mainLayoutMobile]}>
+                {!isMobile && (
+                  <Sidebar
+                    currentScreen={currentRouteName}
+                    onNavigate={(name) => navigationRef.current?.navigate(name as never)}
+                  />
+                )}
                 <View style={styles.content}>
                   <Stack.Navigator
                     screenOptions={{
@@ -129,9 +136,9 @@ export default function App() {
                       options={{
                         headerTitle: '',
                         headerLeft: () => (
-                          <View style={styles.headerLeft}>
-                            <HamburgerButton />
-                            <Text style={styles.headerGreeting} numberOfLines={1}>
+                          <View style={[styles.headerLeft, isMobile && styles.headerLeftMobile]}>
+                            {!isMobile && <HamburgerButton />}
+                            <Text style={[styles.headerGreeting, isMobile && styles.headerGreetingMobile]} numberOfLines={1}>
                               Olá, {user?.name ?? ''} ({user ? getProfessionalTypeLabel(user.professionalType) : ''})
                             </Text>
                           </View>
@@ -144,9 +151,9 @@ export default function App() {
                       options={{
                         headerTitle: '',
                         headerLeft: () => (
-                          <View style={styles.headerLeft}>
-                            <HamburgerButton />
-                            <Text style={styles.headerGreeting} numberOfLines={1}>
+                          <View style={[styles.headerLeft, isMobile && styles.headerLeftMobile]}>
+                            {!isMobile && <HamburgerButton />}
+                            <Text style={[styles.headerGreeting, isMobile && styles.headerGreetingMobile]} numberOfLines={1}>
                               Olá, {user?.name ?? ''} ({user ? getProfessionalTypeLabel(user.professionalType) : ''})
                             </Text>
                           </View>
@@ -160,6 +167,12 @@ export default function App() {
                     />
                   </Stack.Navigator>
                 </View>
+                {isMobile && (
+                  <BottomBar
+                    currentScreen={currentRouteName}
+                    onNavigate={(name) => navigationRef.current?.navigate(name as never)}
+                  />
+                )}
               </View>
             ) : (
               <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -178,8 +191,12 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
   },
+  mainLayoutMobile: {
+    flexDirection: 'column',
+  },
   content: {
     flex: 1,
+    minWidth: 0,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -187,12 +204,18 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
+  headerLeftMobile: {
+    paddingHorizontal: 20,
+  },
   headerGreeting: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
     flex: 1,
+  },
+  headerGreetingMobile: {
+    marginLeft: 0,
   },
   loadingContainer: {
     flex: 1,
