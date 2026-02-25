@@ -685,7 +685,7 @@ const styles = StyleSheet.create({
     minHeight: 0,
   },
   sectionDesktopRight: {
-    marginBottom: 8,
+    marginBottom: 15,
   },
   sectionDesktopRightLast: {
     marginBottom: 0,
