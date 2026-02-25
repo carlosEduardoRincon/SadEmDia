@@ -11,6 +11,7 @@ import {
   Platform,
   Modal,
   KeyboardAvoidingView,
+  useWindowDimensions,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { showAlert } from '../utils/alert';
@@ -48,6 +49,9 @@ export default function PatientDetailScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
   const [prescriptionObservations, setPrescriptionObservations] = useState('');
+
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 768;
 
   useEffect(() => {
     loadData();
@@ -205,79 +209,107 @@ export default function PatientDetailScreen() {
 
   const priority = calculatePatientPriority(patient);
 
+  const infoSection = (
+    <View style={[styles.section, isDesktop && styles.sectionFillHeight, isDesktop && styles.infoSectionMinHeight, styles.infoSection]}>
+      <Text style={styles.sectionTitle}>Informações do Paciente</Text>
+      <View style={[styles.infoContentWrap, isDesktop && styles.infoContentWrapSpread]}>
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Nome:</Text>
+          <Text style={styles.value}>{patient.name}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Idade:</Text>
+          <Text style={styles.value}>{patient.age} anos</Text>
+        </View>
+        {patient.address ? (
+          <View style={styles.infoRow}>
+            <Text style={styles.label}>Endereço:</Text>
+            <Text style={styles.value}>{patient.address}</Text>
+          </View>
+        ) : null}
+        {patient.zone ? (
+          <View style={styles.infoRow}>
+            <Text style={styles.label}>Zona:</Text>
+            <Text style={styles.value}>{patient.zone}</Text>
+          </View>
+        ) : null}
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>Prioridade:</Text>
+          <View style={[styles.priorityBadge, { backgroundColor: priority.priorityScore >= 50 ? '#F44336' : priority.priorityScore >= 25 ? '#FF9800' : '#4CAF50' }]}>
+            <Text style={styles.priorityText}>{priority.priorityScore}</Text>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+
+  const comorbiditiesSection = (
+    <View style={[styles.section, isDesktop && styles.sectionDesktopRight]}>
+      <Text style={styles.sectionTitle}>Comorbidades</Text>
+      {patient.comorbidities && patient.comorbidities.length > 0 ? (
+        patient.comorbidities.map((comorbidity, index) => (
+          <Text key={index} style={styles.comorbidityItem}>
+            • {comorbidity}
+          </Text>
+        ))
+      ) : (
+        <Text style={styles.emptySectionText}>—</Text>
+      )}
+    </View>
+  );
+
+  const priorityReasonsSection = (
+    <View style={[styles.section, isDesktop && styles.sectionDesktopRightLast]}>
+      <Text style={styles.sectionTitle}>Motivos de Prioridade</Text>
+      {priority.reasons.length > 0 ? (
+        priority.reasons.map((reason, index) => (
+          <Text key={index} style={styles.reasonItem}>
+            • {reason}
+          </Text>
+        ))
+      ) : (
+        <Text style={styles.emptySectionText}>—</Text>
+      )}
+    </View>
+  );
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.content}>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Informações do Paciente</Text>
-          <View style={styles.infoRow}>
-            <Text style={styles.label}>Nome:</Text>
-            <Text style={styles.value}>{patient.name}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.label}>Idade:</Text>
-            <Text style={styles.value}>{patient.age} anos</Text>
-          </View>
-          {patient.address ? (
-            <View style={styles.infoRow}>
-              <Text style={styles.label}>Endereço:</Text>
-              <Text style={styles.value}>{patient.address}</Text>
+        {isDesktop ? (
+          <View style={styles.desktopRow}>
+            <View style={styles.desktopColLeft} collapsable={false}>
+              {infoSection}
             </View>
-          ) : null}
-          {patient.zone ? (
-            <View style={styles.infoRow}>
-              <Text style={styles.label}>Zona:</Text>
-              <Text style={styles.value}>{patient.zone}</Text>
-            </View>
-          ) : null}
-          <View style={styles.infoRow}>
-            <Text style={styles.label}>Prioridade:</Text>
-            <View style={[styles.priorityBadge, { backgroundColor: priority.priorityScore >= 50 ? '#F44336' : priority.priorityScore >= 25 ? '#FF9800' : '#4CAF50' }]}>
-              <Text style={styles.priorityText}>{priority.priorityScore}</Text>
+            <View style={styles.desktopColRight} collapsable={false}>
+              {comorbiditiesSection}
+              {priorityReasonsSection}
             </View>
           </View>
-        </View>
-
-        {patient.comorbidities && patient.comorbidities.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Comorbidades</Text>
-            {patient.comorbidities.map((comorbidity, index) => (
-              <Text key={index} style={styles.comorbidityItem}>
-                • {comorbidity}
-              </Text>
-            ))}
-          </View>
-        )}
-
-        {patient.lastVisit && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Última Visita</Text>
-            <Text style={styles.value}>
-              {new Date(patient.lastVisit).toLocaleDateString('pt-BR', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </Text>
-            {patient.lastVisitBy && (
-              <Text style={styles.subValue}>
-                Por: {getProfessionalTypeLabel(patient.lastVisitBy)}
-              </Text>
+        ) : (
+          <>
+            {infoSection}
+            {patient.comorbidities && patient.comorbidities.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Comorbidades</Text>
+                {patient.comorbidities.map((comorbidity, index) => (
+                  <Text key={index} style={styles.comorbidityItem}>
+                    • {comorbidity}
+                  </Text>
+                ))}
+              </View>
             )}
-          </View>
-        )}
-
-        {priority.reasons.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Motivos de Prioridade</Text>
-            {priority.reasons.map((reason, index) => (
-              <Text key={index} style={styles.reasonItem}>
-                • {reason}
-              </Text>
-            ))}
-          </View>
+            {priority.reasons.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Motivos de Prioridade</Text>
+                {priority.reasons.map((reason, index) => (
+                  <Text key={index} style={styles.reasonItem}>
+                    • {reason}
+                  </Text>
+                ))}
+              </View>
+            )}
+          </>
         )}
 
         <View style={styles.section}>
@@ -554,6 +586,47 @@ const styles = StyleSheet.create({
   content: {
     padding: 15,
   },
+  desktopRow: {
+    flexDirection: 'row',
+    marginBottom: 15,
+    alignItems: 'stretch',
+  },
+  desktopColLeft: {
+    flex: 1.2,
+    minWidth: 0,
+    minHeight: 0,
+    marginRight: 8,
+    flexDirection: 'column',
+    alignSelf: 'stretch',
+  },
+  desktopColRight: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'column',
+    alignSelf: 'stretch',
+  },
+  sectionFillHeight: {
+    flex: 1,
+    minHeight: 0,
+  },
+  infoSection: {
+    padding: 22,
+  },
+  infoSectionMinHeight: {
+    minHeight: 318,
+  },
+  infoContentWrap: {},
+  infoContentWrapSpread: {
+    flex: 1,
+    justifyContent: 'space-between',
+    minHeight: 0,
+  },
+  sectionDesktopRight: {
+    marginBottom: 8,
+  },
+  sectionDesktopRightLast: {
+    marginBottom: 0,
+  },
   section: {
     backgroundColor: '#fff',
     borderRadius: 10,
@@ -565,8 +638,13 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  sectionTitle: {
+  emptySectionText: {
     fontSize: 18,
+    color: '#999',
+    fontStyle: 'italic',
+  },
+  sectionTitle: {
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 15,
@@ -578,16 +656,16 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   label: {
-    fontSize: 16,
+    fontSize: 18,
     color: '#666',
     fontWeight: '600',
   },
   value: {
-    fontSize: 16,
+    fontSize: 18,
     color: '#333',
   },
   subValue: {
-    fontSize: 14,
+    fontSize: 18,
     color: '#999',
     marginTop: 5,
   },
@@ -598,11 +676,11 @@ const styles = StyleSheet.create({
   },
   priorityText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
   },
   comorbidityItem: {
-    fontSize: 16,
+    fontSize: 18,
     color: '#333',
     marginBottom: 8,
   },
@@ -617,7 +695,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   reasonItem: {
-    fontSize: 14,
+    fontSize: 18,
     color: '#666',
     marginBottom: 5,
   },
