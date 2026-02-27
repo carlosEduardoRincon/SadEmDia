@@ -1,6 +1,7 @@
 export const ZONES = [
   'Zona Norte',
   'Zona Leste',
+  'Zona Central',
   'Zona Sul',
   'Zona Oeste',
 ] as const;
