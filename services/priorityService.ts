@@ -1,5 +1,5 @@
 import { Patient, PatientPriority, ProfessionalType } from '../types';
-import { differenceInDays, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
+import { differenceInDays } from 'date-fns';
 
 export type AdmissionPhase = 'recent' | 'second_week' | 'after_two_weeks';
 
@@ -31,6 +31,21 @@ export function patientNeedsPrescription(
   return daysUntilDue <= 7;
 }
 
+/**
+ * Escala de prioridade (0–100):
+ * 1. Recém admitido (< 1 semana): 40 pts
+ * 2. Terminal: 30 pts
+ * 3. Ventilação Mecânica: 20 pts
+ * 4. Oncológico: 10 pts
+ */
+const MAX_SCORE = 100;
+
+const PRIORITY_WEIGHTS: Record<string, number> = {
+  'Terminal': 30,
+  'Ventilação Mecânica': 20,
+  'Oncológico': 10,
+};
+
 export function calculatePatientPriority(
   patient: Patient,
   currentDate: Date = new Date(),
@@ -39,74 +54,32 @@ export function calculatePatientPriority(
   let priorityScore = 0;
   const reasons: string[] = [];
 
+  // 1. Recém admitido (< 1 semana): maior prioridade
   const admissionRef = patient.admissionDate ?? patient.createdAt;
-  if (admissionRef && visitCounts) {
+  if (admissionRef) {
     const phase = getAdmissionPhase(admissionRef, currentDate);
-    const { visitsToday, visitsThisWeek } = visitCounts;
     if (phase === 'recent') {
-      const required = 2;
-      if (visitsToday < required) {
-        const deficit = required - visitsToday;
-        priorityScore += deficit * 15;
-        reasons.push(`Recém-admitido: ${visitsToday}/${required} visitas hoje`);
-      }
-    } else if (phase === 'second_week') {
-      const required = 1;
-      if (visitsToday < required) {
-        priorityScore += 15;
-        reasons.push(`Segunda semana: precisa 1 visita/dia (${visitsToday} hoje)`);
-      }
-    } else {
-      const required = 1;
-      if (visitsThisWeek < required) {
-        priorityScore += 20;
-        reasons.push(`Após 2 semanas: precisa 1 visita/semana (${visitsThisWeek} esta semana)`);
-      }
+      priorityScore += 40;
+      reasons.push('Recém admitido (< 1 semana)');
     }
   }
 
+  // 2–4. Comorbidades na ordem: Terminal, Ventilação Mecânica, Oncológico
   if (patient.comorbidities && patient.comorbidities.length > 0) {
-    const comorbidityScore = patient.comorbidities.length * 10;
-    priorityScore += comorbidityScore;
-    reasons.push(`${patient.comorbidities.length} comorbidade(s)`);
-  }
-
-  const needsPrescriptionNow = patientNeedsPrescription(patient, currentDate);
-
-  if (needsPrescriptionNow) {
-    priorityScore += 30;
-    reasons.push('Precisa de receita médica');
-  }
-
-  if (patient.lastVisit) {
-    const daysSinceLastVisit = differenceInDays(currentDate, patient.lastVisit);
-    
-    if (daysSinceLastVisit >= 3) {
-      priorityScore += daysSinceLastVisit * 5;
-      reasons.push(`${daysSinceLastVisit} dias sem visita`);
+    for (const c of patient.comorbidities) {
+      const weight = PRIORITY_WEIGHTS[c];
+      if (weight !== undefined) {
+        priorityScore += weight;
+        reasons.push(c);
+      }
     }
-
-    const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
-    const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
-    const isWeekend = currentDate.getDay() === 0 || currentDate.getDay() === 6;
-    
-    if (isWeekend && !isWithinInterval(patient.lastVisit, { start: weekStart, end: weekEnd })) {
-      priorityScore += 25;
-      reasons.push('Sem visita nesta semana');
-    }
-  } else {
-    priorityScore += 50;
-    reasons.push('Nunca recebeu visita');
   }
 
-  if (patient.visitRequests && patient.visitRequests.length > 0) {
-    priorityScore += patient.visitRequests.length * 15;
-    reasons.push(`${patient.visitRequests.length} solicitação(ões) pendente(s)`);
-  }
+  const clampedScore = Math.round(Math.min(MAX_SCORE, Math.max(0, priorityScore)));
 
   return {
     patient,
-    priorityScore,
+    priorityScore: clampedScore,
     reasons,
   };
 }
