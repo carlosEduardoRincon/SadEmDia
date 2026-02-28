@@ -12,20 +12,21 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import {
   getPendingVisitRequestsForProfessional,
   registerVisit,
   getPatientById,
 } from '../services/patientService';
 import { getCurrentUser } from '../services/authService';
-import type { VisitRequest } from '../types';
+import type { VisitRequest, Zone } from '../types';
 import { showAlert } from '../utils/alert';
 import { getProfessionalTypeLabel } from '../utils/professionalType';
 
 export default function ReferralsScreen() {
+  const navigation = useNavigation();
   const [requests, setRequests] = useState<VisitRequest[]>([]);
-  const [patientNames, setPatientNames] = useState<Record<string, string>>({});
+  const [patientData, setPatientData] = useState<Record<string, { name: string; address?: string; zone?: Zone }>>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [modalRequest, setModalRequest] = useState<VisitRequest | null>(null);
@@ -37,21 +38,25 @@ export default function ReferralsScreen() {
       const user = await getCurrentUser();
       if (!user) {
         setRequests([]);
-        setPatientNames({});
+        setPatientData({});
         return;
       }
       const data = await getPendingVisitRequestsForProfessional(user.professionalType);
       setRequests(data);
 
       const ids = [...new Set(data.map((r) => r.patientId))];
-      const names: Record<string, string> = {};
+      const dataMap: Record<string, { name: string; address?: string; zone?: Zone }> = {};
       await Promise.all(
         ids.map(async (id) => {
           const p = await getPatientById(id);
-          names[id] = p?.name ?? 'Paciente';
+          dataMap[id] = {
+            name: p?.name ?? 'Paciente',
+            address: p?.address,
+            zone: p?.zone,
+          };
         })
       );
-      setPatientNames(names);
+      setPatientData(dataMap);
     } catch (error) {
       showAlert('Erro', 'Não foi possível carregar os encaminhamentos');
       console.error(error);
@@ -110,25 +115,42 @@ export default function ReferralsScreen() {
   }, [modalRequest, observation, closeRegisterModal, loadRequests]);
 
   const renderItem = ({ item }: { item: VisitRequest }) => {
-    const patientName = patientNames[item.patientId] ?? 'Paciente';
+    const patient = patientData[item.patientId] ?? { name: 'Paciente' };
     const requestedByLabel = item.requestedByName ?? getProfessionalTypeLabel(item.requestedByType);
     return (
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.patientName}>{patientName}</Text>
-        </View>
-        <Text style={styles.reason}>{item.reason}</Text>
-        <Text style={styles.meta}>
-          Solicitado por {requestedByLabel}
+      <TouchableOpacity
+        style={styles.card}
+        onPress={() => (navigation as any).navigate('PatientDetail', { patientId: item.patientId })}
+        activeOpacity={0.9}
+      >
+        <Text style={styles.patientName}>{patient.name}</Text>
+        {(patient.address || patient.zone) ? (
+          <Text style={styles.fieldRow}>
+            <Text style={styles.fieldLabel}>Endereço: </Text>
+            <Text style={styles.fieldValue}>
+              {[patient.address, patient.zone].filter(Boolean).join(' • ')}
+            </Text>
+          </Text>
+        ) : null}
+        <Text style={styles.fieldRow}>
+          <Text style={styles.fieldLabel}>Solicitado por: </Text>
+          <Text style={styles.fieldValue}>{requestedByLabel}</Text>
         </Text>
-        <Text style={styles.date}>
-          {new Date(item.createdAt).toLocaleDateString('pt-BR', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
+        <Text style={styles.fieldRow}>
+          <Text style={styles.fieldLabel}>Observação: </Text>
+          <Text style={styles.fieldValue}>{item.reason}</Text>
+        </Text>
+        <Text style={styles.fieldRow}>
+          <Text style={styles.fieldLabel}>Data de solicitação: </Text>
+          <Text style={styles.fieldValue}>
+            {new Date(item.createdAt).toLocaleDateString('pt-BR', {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
+          </Text>
         </Text>
         <TouchableOpacity
           style={styles.registerButton}
@@ -136,7 +158,7 @@ export default function ReferralsScreen() {
         >
           <Text style={styles.registerButtonText}>Registrar visita</Text>
         </TouchableOpacity>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -185,7 +207,7 @@ export default function ReferralsScreen() {
             <Text style={styles.modalTitle}>Registrar visita</Text>
             {modalRequest && (
               <Text style={styles.modalPatient}>
-                Paciente: {patientNames[modalRequest.patientId] ?? 'Paciente'}
+                Paciente: {patientData[modalRequest.patientId]?.name ?? 'Paciente'}
               </Text>
             )}
             <Text style={styles.modalLabel}>Observação</Text>
@@ -247,11 +269,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
+  fieldRow: {
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 6,
+  },
+  fieldLabel: {
+    fontWeight: '600',
+    color: '#555',
+  },
+  fieldValue: {
+    color: '#333',
+    fontWeight: '400',
+  },
   patientName: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
-    flex: 1,
+    marginBottom: 8,
   },
   reason: {
     fontSize: 14,
