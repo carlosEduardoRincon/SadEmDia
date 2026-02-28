@@ -137,7 +137,8 @@ export default function PatientDetailScreen() {
         user.id,
         user.professionalType,
         requestProfessionalType,
-        requestReason
+        requestReason,
+        user.name
       );
       showAlert('Sucesso', 'Solicitação de visita criada com sucesso!');
       setRequestReason('');

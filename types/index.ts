@@ -10,6 +10,7 @@ export interface VisitRequest {
   id: string;
   patientId: string;
   requestedBy: string;
+  requestedByName?: string;
   requestedByType: ProfessionalType;
   requestedFor: ProfessionalType;
   reason: string;

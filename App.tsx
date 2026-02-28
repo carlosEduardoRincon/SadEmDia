@@ -10,6 +10,7 @@ import LoginScreen from './screens/LoginScreen';
 import PatientListScreen from './screens/PatientListScreen';
 import PatientDetailScreen from './screens/PatientDetailScreen';
 import RecipeRequestsScreen from './screens/RecipeRequestsScreen';
+import ReferralsScreen from './screens/ReferralsScreen';
 import HamburgerButton from './components/HamburgerButton';
 import Sidebar from './components/Sidebar';
 import BottomBar from './components/BottomBar';
@@ -150,6 +151,21 @@ export default function App() {
                       component={RecipeRequestsScreen}
                       options={{
                         headerTitle: '',
+                        headerLeft: () => (
+                          <View style={[styles.headerLeft, isMobile && styles.headerLeftMobile]}>
+                            {!isMobile && <HamburgerButton />}
+                            <Text style={[styles.headerGreeting, isMobile && styles.headerGreetingMobile]} numberOfLines={1}>
+                              Olá, {user?.name ?? ''} ({user ? getProfessionalTypeLabel(user.professionalType) : ''})
+                            </Text>
+                          </View>
+                        ),
+                      }}
+                    />
+                    <Stack.Screen
+                      name="Referrals"
+                      component={ReferralsScreen}
+                      options={{
+                        headerTitle: 'Encaminhamentos',
                         headerLeft: () => (
                           <View style={[styles.headerLeft, isMobile && styles.headerLeftMobile]}>
                             {!isMobile && <HamburgerButton />}

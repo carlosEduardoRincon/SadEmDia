@@ -240,7 +240,8 @@ export async function requestVisitFromProfessional(
   requestedBy: string,
   requestedByType: ProfessionalType,
   requestedFor: ProfessionalType,
-  reason: string
+  reason: string,
+  requestedByName?: string
 ): Promise<string> {
   try {
     const db = getDb();
@@ -281,8 +282,7 @@ export async function getPendingVisitRequestsForProfessional(
     const q = query(
       collection(db, VISIT_REQUESTS_COLLECTION),
       where('requestedFor', '==', professionalType),
-      where('status', '==', 'pending'),
-      orderBy('createdAt', 'desc')
+      where('status', '==', 'pending')
     );
 
     const snapshot = await getDocs(q);
@@ -294,6 +294,7 @@ export async function getPendingVisitRequestsForProfessional(
         id: doc.id,
         patientId: data.patientId,
         requestedBy: data.requestedBy,
+        requestedByName: data.requestedByName,
         requestedByType: data.requestedByType,
         requestedFor: data.requestedFor,
         reason: data.reason,
@@ -303,6 +304,7 @@ export async function getPendingVisitRequestsForProfessional(
       });
     });
 
+    requests.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     return requests;
   } catch (error) {
     console.error('Erro ao buscar solicitações:', error);

@@ -9,6 +9,7 @@ import { showAlert } from '../utils/alert';
 type RootStackParamList = {
   PatientList: undefined;
   RecipeRequests: undefined;
+  Referrals: undefined;
 };
 
 const MENU_OPTIONS: {
@@ -18,6 +19,7 @@ const MENU_OPTIONS: {
 }[] = [
   { key: 'PatientList', label: 'Pacientes', icon: 'people' },
   { key: 'RecipeRequests', label: 'Receitas', icon: 'document-text' },
+  { key: 'Referrals', label: 'Encaminhamentos', icon: 'share-social' }
 ];
 
 interface BottomBarProps {
