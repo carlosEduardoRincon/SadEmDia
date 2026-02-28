@@ -37,8 +37,12 @@ export function patientNeedsPrescription(
  * 2. Terminal: 30 pts
  * 3. Ventilação Mecânica: 20 pts
  * 4. Oncológico: 10 pts
+ * 5. Sem visita hoje: +70 pts (quem não recebeu nenhuma visita fica à frente de quem já recebeu)
+ * 6. Com visita hoje: -25 pts por visita
  */
 const MAX_SCORE = 100;
+const NO_VISIT_TODAY_BONUS = 70; // Garante que 0 visitas > qualquer paciente com 1+ visita
+const VISIT_TODAY_PENALTY = 25;
 
 const PRIORITY_WEIGHTS: Record<string, number> = {
   'Terminal': 30,
@@ -46,16 +50,49 @@ const PRIORITY_WEIGHTS: Record<string, number> = {
   'Oncológico': 10,
 };
 
+/** Retorna quantas visitas são necessárias hoje (ou esta semana para após 2 sem). */
+function getRequiredVisits(
+  admissionRef: Date | undefined,
+  currentDate: Date,
+  visitCounts?: VisitCountsForPriority
+): { required: number; met: boolean } {
+  if (!admissionRef || !visitCounts) return { required: 1, met: false };
+  const phase = getAdmissionPhase(admissionRef, currentDate);
+  if (phase === 'recent') {
+    const met = visitCounts.visitsToday >= 2;
+    return { required: 2, met };
+  }
+  if (phase === 'second_week') {
+    const met = visitCounts.visitsToday >= 1;
+    return { required: 1, met };
+  }
+  const met = visitCounts.visitsThisWeek >= 1;
+  return { required: 1, met };
+}
+
 export function calculatePatientPriority(
   patient: Patient,
   currentDate: Date = new Date(),
   visitCounts?: VisitCountsForPriority
 ): PatientPriority {
-  let priorityScore = 0;
   const reasons: string[] = [];
+  const admissionRef = patient.admissionDate ?? patient.createdAt;
+
+  // Se já recebeu todos os atendimentos necessários do dia/semana → prioridade 0
+  if (visitCounts && admissionRef) {
+    const { met } = getRequiredVisits(admissionRef, currentDate, visitCounts);
+    if (met) {
+      return {
+        patient,
+        priorityScore: 0,
+        reasons: ['Atendimentos do dia concluídos'],
+      };
+    }
+  }
+
+  let priorityScore = 0;
 
   // 1. Recém admitido (< 1 semana): maior prioridade
-  const admissionRef = patient.admissionDate ?? patient.createdAt;
   if (admissionRef) {
     const phase = getAdmissionPhase(admissionRef, currentDate);
     if (phase === 'recent') {
@@ -72,6 +109,18 @@ export function calculatePatientPriority(
         priorityScore += weight;
         reasons.push(c);
       }
+    }
+  }
+
+  // 5–6. Sem visita hoje: bônus grande (fica à frente). Com visita: penalidade.
+  if (visitCounts) {
+    if (visitCounts.visitsToday === 0) {
+      priorityScore += NO_VISIT_TODAY_BONUS;
+      reasons.push('Sem atendimento no dia');
+    } else {
+      const penalty = visitCounts.visitsToday * VISIT_TODAY_PENALTY;
+      priorityScore -= penalty;
+      reasons.push(`${visitCounts.visitsToday} visita(s) hoje`);
     }
   }
 

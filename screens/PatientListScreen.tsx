@@ -94,7 +94,7 @@ export default function PatientListScreen() {
     return map;
   }, [visitsByPatientId]);
 
-  /** Prioridades recalculadas com regras de visita por fase de admissão. */
+  /** Prioridades recalculadas. Ordena por score (maior primeiro). */
   const enrichedPatients = useMemo(() => {
     return patients
       .map(({ patient }) => {
