@@ -165,7 +165,7 @@ export default function App() {
                       name="Referrals"
                       component={ReferralsScreen}
                       options={{
-                        headerTitle: 'Encaminhamentos',
+                        headerTitle: '',
                         headerLeft: () => (
                           <View style={[styles.headerLeft, isMobile && styles.headerLeftMobile]}>
                             {!isMobile && <HamburgerButton />}
