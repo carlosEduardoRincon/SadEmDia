@@ -20,9 +20,10 @@ import { PROFESSIONAL_TYPE_OPTIONS, getProfessionalTypeLabel } from '../utils/pr
 export default function LoginScreen() {
   const { width, height } = useWindowDimensions();
   const isMobile = width < 768;
-  const modalPercent = isMobile ? 0.8 : 0.6;
-  const modalWidth = width * modalPercent;
-  const modalMaxHeight = height * modalPercent;
+  const modalPercent = isMobile ? 0.92 : 0.48;
+  const modalWidth = Math.min(width * modalPercent, 520);
+  const modalMaxHeight = height * 0.9;
+  const logoMaxWidth = Math.min(modalWidth - 48, 420);
   const { setUser } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -107,10 +108,10 @@ export default function LoginScreen() {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={[styles.content, { width: modalWidth, maxHeight: modalMaxHeight }]}>
+        <View style={[styles.content, { width: modalWidth, maxWidth: '100%', maxHeight: modalMaxHeight }]}>
           <Image
             source={require('../assets/logo.png')}
-            style={styles.logo}
+            style={[styles.logo, { maxWidth: logoMaxWidth }]}
             resizeMode="contain"
           />
 
@@ -206,25 +207,28 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
-    padding: 20,
+    padding: 28,
     alignItems: 'center',
+    minHeight: '100%',
   },
   content: {
     backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 20,
+    borderRadius: 12,
+    padding: 32,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
     alignSelf: 'center',
+    minWidth: 320,
   },
   logo: {
-    width: 640,
-    height: 265,
+    width: '100%',
+    aspectRatio: 640 / 265,
+    maxHeight: 200,
     alignSelf: 'center',
-    marginBottom: 0,
+    marginBottom: 16,
   },
   title: {
     fontSize: 32,
@@ -242,30 +246,31 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1,
     borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 15,
-    fontSize: 16,
-    marginBottom: 15,
+    borderRadius: 10,
+    padding: 18,
+    fontSize: 17,
+    marginBottom: 18,
     backgroundColor: '#f9f9f9',
+    minWidth: 0,
   },
   pickerContainer: {
-    marginBottom: 15,
+    marginBottom: 18,
   },
   label: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
     color: '#333',
-    marginBottom: 10,
+    marginBottom: 12,
   },
   pickerRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 12,
   },
   pickerOption: {
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: '#ddd',
     backgroundColor: '#f9f9f9',
@@ -275,7 +280,7 @@ const styles = StyleSheet.create({
     borderColor: '#4A90E2',
   },
   pickerOptionText: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#666',
   },
   pickerOptionTextSelected: {
@@ -284,25 +289,25 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: '#4A90E2',
-    borderRadius: 8,
-    padding: 15,
+    borderRadius: 10,
+    padding: 18,
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 14,
   },
   buttonDisabled: {
     opacity: 0.6,
   },
   buttonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
   },
   linkButton: {
-    marginTop: 20,
+    marginTop: 24,
     alignItems: 'center',
   },
   linkText: {
     color: '#4A90E2',
-    fontSize: 14,
+    fontSize: 16,
   },
 });
