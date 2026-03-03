@@ -18,7 +18,7 @@ import { useAuth } from '../context/AuthContext';
 import { PROFESSIONAL_TYPE_OPTIONS, getProfessionalTypeLabel } from '../utils/professionalType';
 
 export default function LoginScreen() {
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const isMobile = width < 768;
   const modalPercent = isMobile ? 0.92 : 0.48;
   const modalWidth = Math.min(width * modalPercent, 520);
@@ -104,27 +104,32 @@ export default function LoginScreen() {
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
       <ScrollView 
-        contentContainerStyle={styles.scrollContent}
+        style={styles.scrollView}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isMobile && styles.scrollContentMobile,
+          isMobile && { minHeight: height },
+        ]}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={[styles.content, { width: modalWidth, maxWidth: '100%' }]}>
+        <View style={[styles.content, { width: modalWidth, maxWidth: '100%' }, isMobile && styles.contentMobile]}>
           <Image
             source={require('../assets/logo.png')}
-            style={[styles.logo, { maxWidth: logoMaxWidth }]}
+            style={[styles.logo, { maxWidth: logoMaxWidth }, isMobile && styles.logoMobile]}
             resizeMode="contain"
           />
 
           {isRegistering && (
             <>
               <TextInput
-                style={styles.input}
+                style={[styles.input, isMobile && styles.inputMobile]}
                 placeholder="Nome completo"
                 value={name}
                 onChangeText={setName}
                 autoCapitalize="words"
               />
-              <View style={styles.pickerContainer}>
-                <Text style={styles.label}>Tipo de Profissional:</Text>
+              <View style={[styles.pickerContainer, isMobile && styles.pickerContainerMobile]}>
+                <Text style={[styles.label, isMobile && styles.labelMobile]}>Tipo de Profissional:</Text>
                 <View style={[styles.pickerRow, isMobile && styles.pickerRowMobile]}>
                   {PROFESSIONAL_TYPE_OPTIONS.map((type) => {
                     const isSelected = professionalType === type;
@@ -133,6 +138,7 @@ export default function LoginScreen() {
                         key={type}
                         style={[
                           styles.pickerOption,
+                          isMobile && styles.pickerOptionMobile,
                           isSelected && styles.pickerOptionSelected,
                         ]}
                         onPress={() => setProfessionalType(type)}
@@ -154,7 +160,7 @@ export default function LoginScreen() {
           )}
 
           <TextInput
-            style={styles.input}
+            style={[styles.input, isMobile && styles.inputMobile]}
             placeholder="Email"
             value={email}
             onChangeText={setEmail}
@@ -164,7 +170,7 @@ export default function LoginScreen() {
           />
 
           <TextInput
-            style={styles.input}
+            style={[styles.input, isMobile && styles.inputMobile]}
             placeholder="Senha"
             value={password}
             onChangeText={setPassword}
@@ -172,7 +178,7 @@ export default function LoginScreen() {
           />
 
           <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
+            style={[styles.button, isMobile && styles.buttonMobile, loading && styles.buttonDisabled]}
             onPress={isRegistering ? handleRegister : handleLogin}
             disabled={loading}
             activeOpacity={0.7}
@@ -183,7 +189,7 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.linkButton}
+            style={[styles.linkButton, isMobile && styles.linkButtonMobile]}
             onPress={() => setIsRegistering(!isRegistering)}
           >
             <Text style={styles.linkText}>
@@ -203,13 +209,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
+  scrollView: {
+    flex: 1,
+  },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
     padding: 28,
     paddingBottom: 40,
     alignItems: 'center',
-    minHeight: '100%',
+  },
+  scrollContentMobile: {
+    padding: 16,
+    paddingBottom: 24,
   },
   content: {
     backgroundColor: '#fff',
@@ -223,12 +235,19 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     minWidth: 320,
   },
+  contentMobile: {
+    padding: 20,
+  },
   logo: {
     width: '100%',
     aspectRatio: 640 / 265,
     maxHeight: 200,
     alignSelf: 'center',
     marginBottom: 16,
+  },
+  logoMobile: {
+    maxHeight: 140,
+    marginBottom: 12,
   },
   title: {
     fontSize: 32,
@@ -253,14 +272,26 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9f9f9',
     minWidth: 0,
   },
+  inputMobile: {
+    padding: 14,
+    fontSize: 16,
+    marginBottom: 12,
+  },
   pickerContainer: {
     marginBottom: 18,
+  },
+  pickerContainerMobile: {
+    marginBottom: 12,
   },
   label: {
     fontSize: 17,
     fontWeight: '600',
     color: '#333',
     marginBottom: 12,
+  },
+  labelMobile: {
+    fontSize: 15,
+    marginBottom: 8,
   },
   pickerRow: {
     flexDirection: 'row',
@@ -277,6 +308,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ddd',
     backgroundColor: '#f9f9f9',
+  },
+  pickerOptionMobile: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
   },
   pickerOptionSelected: {
     backgroundColor: '#4A90E2',
@@ -297,6 +332,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 14,
   },
+  buttonMobile: {
+    padding: 14,
+    marginTop: 10,
+  },
   buttonDisabled: {
     opacity: 0.6,
   },
@@ -308,6 +347,9 @@ const styles = StyleSheet.create({
   linkButton: {
     marginTop: 24,
     alignItems: 'center',
+  },
+  linkButtonMobile: {
+    marginTop: 16,
   },
   linkText: {
     color: '#4A90E2',
