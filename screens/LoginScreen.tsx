@@ -18,11 +18,10 @@ import { useAuth } from '../context/AuthContext';
 import { PROFESSIONAL_TYPE_OPTIONS, getProfessionalTypeLabel } from '../utils/professionalType';
 
 export default function LoginScreen() {
-  const { width, height } = useWindowDimensions();
+  const { width } = useWindowDimensions();
   const isMobile = width < 768;
   const modalPercent = isMobile ? 0.92 : 0.48;
   const modalWidth = Math.min(width * modalPercent, 520);
-  const modalMaxHeight = height * 0.9;
   const logoMaxWidth = Math.min(modalWidth - 48, 420);
   const { setUser } = useAuth();
   const [email, setEmail] = useState('');
@@ -108,7 +107,7 @@ export default function LoginScreen() {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={[styles.content, { width: modalWidth, maxWidth: '100%', maxHeight: modalMaxHeight }]}>
+        <View style={[styles.content, { width: modalWidth, maxWidth: '100%' }]}>
           <Image
             source={require('../assets/logo.png')}
             style={[styles.logo, { maxWidth: logoMaxWidth }]}
@@ -126,7 +125,7 @@ export default function LoginScreen() {
               />
               <View style={styles.pickerContainer}>
                 <Text style={styles.label}>Tipo de Profissional:</Text>
-                <View style={styles.pickerRow}>
+                <View style={[styles.pickerRow, isMobile && styles.pickerRowMobile]}>
                   {PROFESSIONAL_TYPE_OPTIONS.map((type) => {
                     const isSelected = professionalType === type;
                     return (
@@ -208,6 +207,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     padding: 28,
+    paddingBottom: 40,
     alignItems: 'center',
     minHeight: '100%',
   },
@@ -266,6 +266,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
+  },
+  pickerRowMobile: {
+    gap: 8,
   },
   pickerOption: {
     paddingVertical: 12,
