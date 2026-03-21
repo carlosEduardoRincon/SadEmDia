@@ -47,6 +47,9 @@ module.exports = {
         appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
         measurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID,
       },
+      eas: {
+        projectId: process.env.EAS,
+      },
     },
   },
 };
